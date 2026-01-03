@@ -1,16 +1,24 @@
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
+const sequelize = require('./config/db');
+const Alumno = require('./models/Alumno');
+const Nota = require('./models/Nota');
 
 const app = express();
-app.use(cors()); // Permite peticiones externas
-app.use(express.json()); // Permite leer JSON en el body
+app.use(cors());
+app.use(express.json());
 
-app.get('/', (req, res) => {
-    res.send('API de Gestión Académica funcionando 🚀');
-});
+// Establecer Relaciones
+Alumno.hasMany(Nota);
+Nota.belongsTo(Alumno);
 
-const PORT = process.env.PORT || 3000;
+// Sincronizar Base de Datos
+// { force: false } evita que se borren los datos cada vez que reinicias
+sequelize.sync({ force: false }).then(() => {
+    console.log('Tablas sincronizadas en la base de datos');
+}).catch(err => console.log('Error al sincronizar:', err));
+
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-    console.log(`Servidor corriendo en puerto ${PORT}`);
+    console.log(`Servidor en puerto ${PORT}`);
 });
