@@ -18,6 +18,22 @@ sequelize.sync({ force: false }).then(() => {
     console.log('Tablas sincronizadas en la base de datos');
 }).catch(err => console.log('Error al sincronizar:', err));
 
+// Ruta para crear un alumno
+app.post('/alumnos', async (req, res) => {
+    try {
+        const nuevoAlumno = await Alumno.create(req.body);
+        res.status(201).json(nuevoAlumno);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Ruta para listar alumnos
+app.get('/alumnos', async (req, res) => {
+    const lista = await Alumno.findAll();
+    res.json(lista);
+});
+
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
     console.log(`Servidor en puerto ${PORT}`);
