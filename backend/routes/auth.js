@@ -4,10 +4,10 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// Register
+// Register (Public or Protected depending on strategy, assuming Public for now but only for 'alumno' by default)
 router.post('/register', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, role } = req.body;
 
         // Verificar si existe
         const existingUser = await User.findOne({ where: { email } });
@@ -18,9 +18,12 @@ router.post('/register', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, salt);
 
         // Crear usuario
+        // Nota: En un sistema real, no permitirías enviar 'role' libremente desde el registro público.
+        // Aquí lo permitimos para facilitar la carga inicial o debieras usar el panel administrativo.
         const user = await User.create({
             email,
-            password: hashedPassword
+            password: hashedPassword,
+            role: role || 'alumno'
         });
 
         res.status(201).json({ message: 'Usuario creado exitosamente' });

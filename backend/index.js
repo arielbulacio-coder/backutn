@@ -49,6 +49,16 @@ sequelize.sync({ force: false }).then(async () => {
 // Rutas de Autenticación
 app.use('/', authRoutes);
 
+// --- GESTIÓN DE USUARIOS (ADMIN) ---
+app.get('/users', verifyToken, authorize(['admin']), async (req, res) => {
+    try {
+        const users = await User.findAll({ attributes: { exclude: ['password'] } });
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- RUTAS DE ALUMNOS ---
 // Crear alumno: Solo Director, Secretario, Jefe de Preceptores, Admin
 app.post('/alumnos', verifyToken, authorize(['admin', 'director', 'secretario', 'jefe_preceptores']), async (req, res) => {
