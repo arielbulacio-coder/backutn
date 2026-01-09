@@ -528,8 +528,7 @@ app.post('/notas', verifyToken, authorize(['admin', 'profesor', 'director']), as
         // Para simplificar, dejamos validación soft. 
         const permitido = await validarAsignacionProfesor(req.user, alumno.curso, materia);
         if (!permitido) {
-            // return res.status(403).json({ message: 'No tiene asignada esta materia en este curso.' });
-            // Desactivado temporalmente para facilitar pruebas de Admin cargando histórico
+            return res.status(403).json({ message: 'No tiene asignada esta materia en este curso.' });
         }
 
         // Buscar registro por alumno, materia Y CICLO LECTIVO
