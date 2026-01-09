@@ -44,7 +44,11 @@ router.post('/login', async (req, res) => {
         if (!validPass) return res.status(400).json({ message: 'Usuario o contraseña incorrectos' });
 
         // Crear token
-        const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || 'secreto_super_seguro', { expiresIn: '1h' });
+        const token = jwt.sign(
+            { id: user.id, role: user.role, email: user.email },
+            process.env.JWT_SECRET || 'secreto_super_seguro',
+            { expiresIn: '24h' }
+        );
 
         res.json({
             token,

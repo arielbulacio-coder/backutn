@@ -135,10 +135,45 @@ app.post('/alumnos', verifyToken, authorize(['admin', 'director', 'secretario', 
     }
 });
 
-// Listar alumnos: Personal académico y administrativo, y propios alumnos/padres (filtrado en front o back)
-app.get('/alumnos', verifyToken, authorize(['admin', 'director', 'secretario', 'jefe_preceptores', 'preceptor', 'profesor', 'alumno', 'padre']), async (req, res) => {
-    const lista = await Alumno.findAll({ include: [Nota, Asistencia] });
-    res.json(lista);
+// Listar alumnos: Solo Personal académico y administrativo (admin, director, prof, preceptor, etc)
+app.get('/alumnos', verifyToken, authorize(['admin', 'director', 'secretario', 'jefe_preceptores', 'preceptor', 'profesor']), async (req, res) => {
+    try {
+        const lista = await Alumno.findAll({ include: [Nota, Asistencia] });
+        res.json(lista);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Obtener boletín propio (para alumno) o de hijo (para padre) - SEGURO
+app.get('/boletin', verifyToken, authorize(['alumno', 'padre', 'admin']), async (req, res) => {
+    try {
+        const userEmail = req.user.email; // extraído de verifyToken (req.user contiene el payload del JWT)
+
+        let alumno;
+        if (req.user.role === 'alumno') {
+            alumno = await Alumno.findOne({
+                where: { email: userEmail },
+                include: [Nota, Asistencia]
+            });
+        } else if (req.user.role === 'padre') {
+            alumno = await Alumno.findOne({
+                where: { email_padre: userEmail },
+                include: [Nota, Asistencia]
+            });
+        } else {
+            // Admin can see any? For now just as safeguard
+            alumno = await Alumno.findOne({ include: [Nota, Asistencia] });
+        }
+
+        if (!alumno) {
+            return res.status(404).json({ message: 'No se encontró información del alumno asociado.' });
+        }
+
+        res.json(alumno);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // --- RUTAS DE NOTAS ---
