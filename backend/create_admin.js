@@ -10,8 +10,8 @@ async function createAdmin() {
         // Sincronizar modelos
         await sequelize.sync();
 
-        const email = 'admin@admin.com';
-        const password = 'admin123';
+        const email = 'arielbulacio@gmail.com';
+        const password = 'ariel2027';
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const [user, created] = await User.findOrCreate({

@@ -31,15 +31,16 @@ sequelize.sync({ force: false }).then(async () => {
 
     // Crear usuario admin por defecto si no existe ninguno
     try {
-        const adminExists = await User.findOne({ where: { email: 'admin@admin.com' } });
+        const adminEmail = 'arielbulacio@gmail.com';
+        const adminExists = await User.findOne({ where: { email: adminEmail } });
         if (!adminExists) {
-            const hashedPassword = await bcrypt.hash('admin123', 10);
+            const hashedPassword = await bcrypt.hash('ariel2027', 10);
             await User.create({
-                email: 'admin@admin.com',
+                email: adminEmail,
                 password: hashedPassword,
                 role: 'admin'
             });
-            console.log('Usuario admin creado por defecto: admin@admin.com / admin123');
+            console.log(`Usuario admin creado por defecto: ${adminEmail} / ariel2027`);
         }
     } catch (error) {
         console.error('Error al crear usuario admin:', error);
