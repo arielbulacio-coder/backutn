@@ -184,6 +184,7 @@ app.post('/test/seed', verifyToken, authorize(['admin']), async (req, res) => {
 
         // 2. Alumnos de Relleno
         const alumnosData = [
+            { nombre: 'Juan', apellido: 'Pérez', email: 'alumno1@utn.com', legajo: 'L001', curso: '2A', email_padre: 'padre1@utn.com', dni: '40123456' },
             { nombre: 'Maria', apellido: 'Lopez', email: 'maria@utn.com', legajo: 'L002', curso: '1A', email_padre: 'padre2@utn.com', dni: '40000002' },
             { nombre: 'Carlos', apellido: 'Gomez', email: 'carlos@utn.com', legajo: 'L003', curso: '2B', email_padre: 'padre3@utn.com', dni: '40000003' },
             { nombre: 'Sofia', apellido: 'Martinez', email: 'sofia@utn.com', legajo: 'L004', curso: '2A', email_padre: 'padre4@utn.com', dni: '40000004' },
