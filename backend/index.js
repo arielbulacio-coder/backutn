@@ -163,90 +163,60 @@ app.post('/test/fix-juan', verifyToken, authorize(['admin']), async (req, res) =
 
 app.post('/test/seed', verifyToken, authorize(['admin']), async (req, res) => {
     try {
+        console.log('Seeding general data...');
         const passwordHash = await bcrypt.hash('123456', 10);
 
-        // 1. Usuarios
+        // 1. Usuarios Básicos (si no existen)
         const usersData = [
             { email: 'profesor@utn.com', role: 'profesor' },
             { email: 'preceptor@utn.com', role: 'preceptor' },
             { email: 'director@utn.com', role: 'director' },
-            { email: 'alumno1@utn.com', role: 'alumno' },
+            { email: 'alumno1@utn.com', role: 'alumno' }, // Juan Perez ya tiene su user
             { email: 'padre1@utn.com', role: 'padre' },
         ];
 
         for (const u of usersData) {
-            const [userRecord, created] = await User.findOrCreate({
+            await User.findOrCreate({
                 where: { email: u.email },
                 defaults: { password: passwordHash, role: u.role }
             });
-            if (!created) {
-                userRecord.role = u.role;
-                await userRecord.save();
-            }
         }
 
-        // 2. Alumnos
+        // 2. Alumnos de Relleno
         const alumnosData = [
-            { nombre: 'Juan', apellido: 'Perez', email: 'alumno1@utn.com', legajo: 'L001', curso: '1A', email_padre: 'padre1@utn.com' },
-            { nombre: 'Maria', apellido: 'Lopez', email: 'maria@utn.com', legajo: 'L002', curso: '1A', email_padre: 'padre2@utn.com' },
-            { nombre: 'Carlos', apellido: 'Gomez', email: 'carlos@utn.com', legajo: 'L003', curso: '2B' },
+            { nombre: 'Maria', apellido: 'Lopez', email: 'maria@utn.com', legajo: 'L002', curso: '1A', email_padre: 'padre2@utn.com', dni: '40000002' },
+            { nombre: 'Carlos', apellido: 'Gomez', email: 'carlos@utn.com', legajo: 'L003', curso: '2B', email_padre: 'padre3@utn.com', dni: '40000003' },
+            { nombre: 'Sofia', apellido: 'Martinez', email: 'sofia@utn.com', legajo: 'L004', curso: '2A', email_padre: 'padre4@utn.com', dni: '40000004' },
+            { nombre: 'Lucas', apellido: 'Rodriguez', email: 'lucas@utn.com', legajo: 'L005', curso: '3C', email_padre: 'padre5@utn.com', dni: '40000005' }
         ];
 
+        let createdCount = 0;
         for (const a of alumnosData) {
             const [alumno, created] = await Alumno.findOrCreate({
                 where: { legajo: a.legajo },
                 defaults: a
             });
-            if (!created) {
-                await alumno.update(a);
-            }
-        }
+            if (!created) await alumno.update(a); // Update course/email if changed
+            if (created) createdCount++;
 
-        const materias = ['Matemática', 'Lengua', 'Física', 'Historia', 'Geografía', 'Inglés', 'Educación Física', 'Biología', 'Taller General'];
+            // Crear notas random para estos alumnos
+            await Nota.destroy({ where: { AlumnoId: alumno.id } });
 
-        // 3. Notas de prueba (Para Juan Perez en TODAS las materias)
-        const juan = await Alumno.findOne({ where: { legajo: 'L001' } });
-        if (juan) {
-            // Limpiar notas previas para asegurar que el seed sea determinista
-            await Nota.destroy({ where: { AlumnoId: juan.id } });
-
-            for (const mat of materias) {
-                const rand = (min, max) => (Math.random() * (max - min) + min).toFixed(2);
-                await Nota.create({
-                    t1_p1: rand(7, 10), t1_p2: rand(7, 10), t1_p3: rand(7, 10),
-                    t2_p1: rand(6, 9), t2_p2: rand(6, 9), t2_p3: rand(7, 10),
-                    t3_p1: rand(8, 10), t3_p2: rand(8, 10), t3_p3: rand(8, 10),
-                    final_anual: rand(7, 10),
-                    AlumnoId: juan.id, materia: mat,
-                    final_cursada: rand(7, 10)
-                });
-            }
-        }
-
-        // 4. Materiales y Actividades de prueba (LMS) - Para TODOS los sujetos
-        await Material.destroy({ where: { curso: '1A' } });
-        await Actividad.destroy({ where: { curso: '1A' } });
-
-        for (const mat of materias) {
-            await Material.create({
-                titulo: `Material de ${mat}`,
-                descripcion: `Conceptos introductorios de ${mat} para el ciclo lectivo.`,
-                curso: '1A', materia: mat, tipo: 'pdf',
-                url: 'https://example.com/documento.pdf'
-            });
-
-            await Actividad.create({
-                titulo: `TP inicial de ${mat}`,
-                descripcion: `Tarea de diagnóstico de ${mat}.`,
-                curso: '1A', materia: mat,
-                fecha_entrega: '2026-03-30'
-            });
+            const materias = ['Matemática', 'Lengua', 'Física', 'Historia', 'Inglés'];
+            const notas = materias.map(m => ({
+                AlumnoId: alumno.id,
+                materia: m,
+                t1_p1: (Math.random() * 3 + 7).toFixed(2),
+                t1_p2: (Math.random() * 3 + 7).toFixed(2),
+                t2_p1: (Math.random() * 4 + 6).toFixed(2)
+            }));
+            await Nota.bulkCreate(notas);
         }
 
         res.json({
-            message: 'Datos de prueba (alumnos, notas, LMS exhaustivo) creados correctamente',
-            notas_cargadas: juan ? materias.length : 0,
-            lms_items: materias.length * 2
+            message: 'Datos de prueba generados.',
+            alumnos_procesados: alumnosData.length,
+            nuevos: createdCount
         });
     } catch (error) {
         console.error(error);

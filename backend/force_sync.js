@@ -1,16 +1,26 @@
 const sequelize = require('./config/db');
-require('./models/Alumno');
-require('./models/Nota');
+const Alumno = require('./models/Alumno');
+const Nota = require('./models/Nota');
+const HistorialAcademico = require('./models/HistorialAcademico');
 require('./models/User');
-require('./models/Asistencia');
+const Asistencia = require('./models/Asistencia');
+require('./models/User');
 require('./models/Material');
 require('./models/Actividad');
+
+// Asociaciones
+Alumno.hasMany(Nota, { as: 'Notas' });
+Nota.belongsTo(Alumno);
+Alumno.hasMany(HistorialAcademico, { as: 'Historial' });
+HistorialAcademico.belongsTo(Alumno);
+Alumno.hasMany(Asistencia, { as: 'Asistencias' });
+Asistencia.belongsTo(Alumno);
 
 async function forceSync() {
     try {
         console.log('Sincronizando modelos...');
-        // Alter false for now, we just want to ensure they exist
-        await sequelize.sync();
+        // Alter matching remote config
+        await sequelize.sync({ alter: true });
         console.log('Sincronización terminada.');
     } catch (e) {
         console.error('Error durante sync:', e);
