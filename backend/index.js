@@ -16,10 +16,28 @@ app.use(express.json());
 Alumno.hasMany(Nota);
 Nota.belongsTo(Alumno);
 
+const bcrypt = require('bcryptjs');
+
 // Sincronizar Base de Datos
 // { force: false } evita que se borren los datos cada vez que reinicias
-sequelize.sync({ force: false }).then(() => {
+sequelize.sync({ force: false }).then(async () => {
     console.log('Tablas sincronizadas en la base de datos');
+
+    // Crear usuario admin por defecto si no existe ninguno
+    try {
+        const adminExists = await User.findOne({ where: { email: 'admin@admin.com' } });
+        if (!adminExists) {
+            const hashedPassword = await bcrypt.hash('admin123', 10);
+            await User.create({
+                email: 'admin@admin.com',
+                password: hashedPassword,
+                role: 'admin'
+            });
+            console.log('Usuario admin creado por defecto: admin@admin.com / admin123');
+        }
+    } catch (error) {
+        console.error('Error al crear usuario admin:', error);
+    }
 }).catch(err => console.log('Error al sincronizar:', err));
 
 // Rutas de Autenticación
