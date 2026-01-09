@@ -216,7 +216,13 @@ app.post('/alumnos', verifyToken, authorize(['admin', 'director', 'secretario', 
 // Listar alumnos: Solo Personal académico y administrativo (admin, director, prof, preceptor, etc)
 app.get('/alumnos', verifyToken, authorize(['admin', 'director', 'secretario', 'jefe_preceptores', 'preceptor', 'profesor']), async (req, res) => {
     try {
-        const lista = await Alumno.findAll({ include: [{ model: Nota, as: 'Notas' }, { model: Asistencia, as: 'Asistencias' }] });
+        const lista = await Alumno.findAll({
+            include: [
+                { model: Nota, as: 'Notas' },
+                { model: Asistencia, as: 'Asistencias' },
+                { model: HistorialAcademico, as: 'Historial' }
+            ]
+        });
         res.json(lista);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -244,7 +250,8 @@ app.get('/boletin', verifyToken, authorize(['alumno', 'padre', 'admin']), async 
                         as: 'Asistencias',
                         where: req.query.ciclo_lectivo ? { ciclo_lectivo: req.query.ciclo_lectivo } : undefined,
                         required: false
-                    }
+                    },
+                    { model: HistorialAcademico, as: 'Historial' }
                 ]
             });
         } else if (req.user.role === 'padre') {
@@ -262,12 +269,19 @@ app.get('/boletin', verifyToken, authorize(['alumno', 'padre', 'admin']), async 
                         as: 'Asistencias',
                         where: req.query.ciclo_lectivo ? { ciclo_lectivo: req.query.ciclo_lectivo } : undefined,
                         required: false
-                    }
+                    },
+                    { model: HistorialAcademico, as: 'Historial' }
                 ]
             });
         } else {
             // Admin can see any? For now just as safeguard
-            alumno = await Alumno.findOne({ include: [{ model: Nota, as: 'Notas' }, { model: Asistencia, as: 'Asistencias' }] });
+            alumno = await Alumno.findOne({
+                include: [
+                    { model: Nota, as: 'Notas' },
+                    { model: Asistencia, as: 'Asistencias' },
+                    { model: HistorialAcademico, as: 'Historial' }
+                ]
+            });
         }
 
         if (!alumno) {
