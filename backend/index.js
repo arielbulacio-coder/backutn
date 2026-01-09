@@ -531,11 +531,9 @@ app.post('/notas', verifyToken, authorize(['admin', 'profesor', 'director']), as
             notaRecord = await Nota.create({ AlumnoId, materia, ciclo_lectivo, ...grades });
             return res.status(201).json(notaRecord);
         }
-        return res.status(201).json(notaRecord);
-    }
     } catch (error) {
-    res.status(400).json({ error: error.message });
-}
+        res.status(400).json({ error: error.message });
+    }
 });
 
 // --- RUTAS DE ASISTENCIA ---
