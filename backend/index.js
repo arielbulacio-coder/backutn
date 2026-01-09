@@ -101,13 +101,13 @@ app.post('/test/fix-juan', verifyToken, authorize(['admin']), async (req, res) =
                 email: 'juan.perez@alumno.utn.edu.ar',
                 email_padre: 'padre.perez@gmail.com',
                 dni: '40123456',
-                curso: '2° A'
+                curso: '2A'
             }
         });
 
         // Asegurar curso correcto
-        if (!created || alumno.curso !== '2° A') {
-            await alumno.update({ curso: '2° A' });
+        if (!created || alumno.curso !== '2A') {
+            await alumno.update({ curso: '2A' });
         }
 
         // 2. Cargar Trayectoria (Año Anterior: 1° A - 2025)
@@ -115,7 +115,7 @@ app.post('/test/fix-juan', verifyToken, authorize(['admin']), async (req, res) =
 
         await HistorialAcademico.create({
             ciclo_lectivo: 2025,
-            curso: '1° A',
+            curso: '1A',
             condicion: 'promovido',
             promedio_general: 8.50,
             observaciones: 'Excelente compañero. Destacado en Taller.',
