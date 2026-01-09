@@ -163,7 +163,7 @@ app.post('/test/fix-juan', verifyToken, authorize(['admin']), async (req, res) =
 
 app.post('/test/seed', verifyToken, authorize(['admin']), async (req, res) => {
     try {
-        console.log('Seeding general data...');
+        console.log('Seeding general data... REDEPLOY FIX');
         const passwordHash = await bcrypt.hash('123456', 10);
 
         // 1. Usuarios Básicos (si no existen)
