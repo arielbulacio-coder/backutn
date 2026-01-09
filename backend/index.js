@@ -12,9 +12,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const Asistencia = require('./models/Asistencia');
+const authorize = require('./middleware/roleMiddleware');
+
 // Establecer Relaciones
 Alumno.hasMany(Nota);
 Nota.belongsTo(Alumno);
+
+Alumno.hasMany(Asistencia);
+Asistencia.belongsTo(Alumno);
 
 const bcrypt = require('bcryptjs');
 
@@ -43,8 +49,9 @@ sequelize.sync({ force: false }).then(async () => {
 // Rutas de Autenticación
 app.use('/', authRoutes);
 
-// Ruta para crear un alumno (Protegida)
-app.post('/alumnos', verifyToken, async (req, res) => {
+// --- RUTAS DE ALUMNOS ---
+// Crear alumno: Solo Director, Secretario, Jefe de Preceptores, Admin
+app.post('/alumnos', verifyToken, authorize(['admin', 'director', 'secretario', 'jefe_preceptores']), async (req, res) => {
     try {
         const nuevoAlumno = await Alumno.create(req.body);
         res.status(201).json(nuevoAlumno);
@@ -53,10 +60,50 @@ app.post('/alumnos', verifyToken, async (req, res) => {
     }
 });
 
-// Ruta para listar alumnos (Protegida)
-app.get('/alumnos', verifyToken, async (req, res) => {
-    const lista = await Alumno.findAll();
+// Listar alumnos: Personal académico y administrativo
+app.get('/alumnos', verifyToken, authorize(['admin', 'director', 'secretario', 'jefe_preceptores', 'preceptor', 'profesor']), async (req, res) => {
+    const lista = await Alumno.findAll({ include: [Nota, Asistencia] });
     res.json(lista);
+});
+
+// --- RUTAS DE NOTAS ---
+// Cargar nota: Profesor, Admin
+app.post('/notas', verifyToken, authorize(['admin', 'profesor', 'director']), async (req, res) => {
+    try {
+        const { AlumnoId, valor, materia, trimestre } = req.body;
+        const alumno = await Alumno.findByPk(AlumnoId);
+        if (!alumno) return res.status(404).json({ message: 'Alumno no encontrado' });
+
+        const nuevaNota = await Nota.create({ valor, materia, trimestre, AlumnoId });
+        res.status(201).json(nuevaNota);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// --- RUTAS DE ASISTENCIA ---
+// Tomar lista: Preceptor, Jefe, Director, Admin
+app.post('/asistencias', verifyToken, authorize(['admin', 'preceptor', 'jefe_preceptores', 'director']), async (req, res) => {
+    try {
+        // Espera un array de asistencias o una sola
+        const body = Array.isArray(req.body) ? req.body : [req.body];
+
+        // Ejemplo body: [{ AlumnoId: 1, estado: 'presente', fecha: '2025-01-08' }]
+        const nuevasAsistencias = await Asistencia.bulkCreate(body);
+        res.status(201).json(nuevasAsistencias);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.get('/asistencias', verifyToken, async (req, res) => {
+    // Si es alumno o padre, filtrar solo las suyas (Pendiente de vincular Usuario -> Alumno)
+    // Por ahora devolvemos todo para roles con permiso
+    if (['admin', 'director', 'preceptor', 'jefe_preceptores'].includes(req.user.role)) {
+        const lista = await Asistencia.findAll({ include: Alumno });
+        return res.json(lista);
+    }
+    res.status(403).json({ message: 'Acceso restringido' });
 });
 
 const PORT = process.env.PORT || 10000;
