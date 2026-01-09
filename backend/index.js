@@ -75,10 +75,14 @@ app.post('/test/seed', verifyToken, authorize(['admin']), async (req, res) => {
         ];
 
         for (const u of usersData) {
-            await User.findOrCreate({
+            const [userRecord, created] = await User.findOrCreate({
                 where: { email: u.email },
                 defaults: { password: passwordHash, role: u.role }
             });
+            if (!created) {
+                userRecord.role = u.role;
+                await userRecord.save();
+            }
         }
 
         // 2. Alumnos
