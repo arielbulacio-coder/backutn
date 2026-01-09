@@ -22,6 +22,8 @@ const HistorialAcademico = sequelize.define('HistorialAcademico', {
         type: DataTypes.TEXT,
         allowNull: true
     }
+}, {
+    tableName: 'HistorialAcademicos'
 });
 
 module.exports = HistorialAcademico;
