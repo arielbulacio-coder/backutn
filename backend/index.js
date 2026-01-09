@@ -661,5 +661,5 @@ app.post('/ciclo-lectivo/promocion-masiva', verifyToken, authorize(['admin', 'di
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-    console.log(`Servidor en puerto ${PORT}`);
+    console.log(`Servidor en puerto ${PORT} - Build: ${new Date().toISOString()} - NO PRESENTE FIELD`);
 });

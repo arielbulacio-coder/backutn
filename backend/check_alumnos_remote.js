@@ -19,7 +19,8 @@ async function checkAlumnos() {
 
         if (!alumnosResponse.ok) {
             console.error('Alumnos Error Status:', alumnosResponse.status);
-            console.error('Alumnos Error Text:', await alumnosResponse.text());
+            const errorText = await alumnosResponse.text();
+            console.error('Alumnos Error Text:', errorText);
             return;
         }
 
