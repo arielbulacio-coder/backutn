@@ -26,7 +26,7 @@ const bcrypt = require('bcryptjs');
 
 // Sincronizar Base de Datos
 // { force: false } evita que se borren los datos cada vez que reinicias
-sequelize.sync({ force: false }).then(async () => {
+sequelize.sync({ alter: true }).then(async () => {
     console.log('Tablas sincronizadas en la base de datos');
 
     // Crear usuario admin por defecto si no existe ninguno
@@ -85,6 +85,17 @@ app.post('/notas', verifyToken, authorize(['admin', 'profesor', 'director']), as
         const alumno = await Alumno.findByPk(AlumnoId);
         if (!alumno) return res.status(404).json({ message: 'Alumno no encontrado' });
 
+        // Buscar si ya existe la nota
+        const existingNota = await Nota.findOne({
+            where: { AlumnoId, materia, trimestre }
+        });
+
+        if (existingNota) {
+            existingNota.valor = valor;
+            await existingNota.save();
+            return res.status(200).json(existingNota);
+        }
+
         const nuevaNota = await Nota.create({ valor, materia, trimestre, AlumnoId });
         res.status(201).json(nuevaNota);
     } catch (error) {
@@ -99,7 +110,16 @@ app.post('/asistencias', verifyToken, authorize(['admin', 'preceptor', 'jefe_pre
         // Espera un array de asistencias o una sola
         const body = Array.isArray(req.body) ? req.body : [req.body];
 
-        // Ejemplo body: [{ AlumnoId: 1, estado: 'presente', fecha: '2025-01-08' }]
+        // Eliminar duplicados previos para "sobrescribir" asistencia
+        for (const record of body) {
+            await Asistencia.destroy({
+                where: {
+                    AlumnoId: record.AlumnoId,
+                    fecha: record.fecha
+                }
+            });
+        }
+
         const nuevasAsistencias = await Asistencia.bulkCreate(body);
         res.status(201).json(nuevasAsistencias);
     } catch (error) {
