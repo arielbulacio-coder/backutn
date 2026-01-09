@@ -16,10 +16,10 @@ const Asistencia = require('./models/Asistencia');
 const authorize = require('./middleware/roleMiddleware');
 
 // Establecer Relaciones
-Alumno.hasMany(Nota);
+Alumno.hasMany(Nota, { as: 'Notas' });
 Nota.belongsTo(Alumno);
 
-Alumno.hasMany(Asistencia);
+Alumno.hasMany(Asistencia, { as: 'Asistencias' });
 Asistencia.belongsTo(Alumno);
 
 const bcrypt = require('bcryptjs');
@@ -103,27 +103,51 @@ app.post('/test/seed', verifyToken, authorize(['admin']), async (req, res) => {
         if (juan) {
             const materias = ['Matemática', 'Lengua', 'Física', 'Historia', 'Geografía', 'Inglés', 'Educación Física', 'Biología', 'Taller General'];
 
+            // Limpiar notas previas para asegurar que el seed sea determinista
+            await Nota.destroy({ where: { AlumnoId: juan.id } });
+
             for (const mat of materias) {
                 const rand = (min, max) => (Math.random() * (max - min) + min).toFixed(2);
-                const gradeData = {
-                    t1_p1: rand(6, 10), t1_p2: rand(6, 10), t1_p3: rand(6, 10),
-                    t2_p1: rand(5, 9), t2_p2: rand(5, 9), t2_p3: rand(6, 10),
-                    t3_p1: rand(7, 10), t3_p2: rand(7, 10), t3_p3: rand(7, 10),
+                await Nota.create({
+                    t1_p1: rand(7, 10), t1_p2: rand(7, 10), t1_p3: rand(7, 10),
+                    t2_p1: rand(6, 9), t2_p2: rand(6, 9), t2_p3: rand(7, 10),
+                    t3_p1: rand(8, 10), t3_p2: rand(8, 10), t3_p3: rand(8, 10),
                     final_anual: rand(7, 10),
-                    AlumnoId: juan.id, materia: mat
-                };
-
-                const [nota, created] = await Nota.findOrCreate({
-                    where: { AlumnoId: juan.id, materia: mat },
-                    defaults: gradeData
+                    AlumnoId: juan.id, materia: mat,
+                    final_cursada: rand(7, 10)
                 });
-                if (!created) {
-                    await nota.update(gradeData);
-                }
             }
         }
 
-        res.json({ message: 'Datos de prueba creados correctamente' });
+        // 4. Materiales y Actividades de prueba (LMS)
+        await Material.destroy({ where: { curso: '1A' } });
+        await Actividad.destroy({ where: { curso: '1A' } });
+
+        await Material.create({
+            titulo: 'Introducción a la Electrónica',
+            descripcion: 'Conceptos básicos, ley de ohm y potencia.',
+            curso: '1A', materia: 'Matemática', tipo: 'pdf',
+            url: 'https://example.com/intro.pdf'
+        });
+
+        await Material.create({
+            titulo: 'Video: Circuitos en Serie',
+            descripcion: 'Explicación detallada con ejemplos prácticos.',
+            curso: '1A', materia: 'Matemática', tipo: 'youtube',
+            url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+        });
+
+        await Actividad.create({
+            titulo: 'TP N°1: Cálculo de Resistencias',
+            descripcion: 'Resolver los ejercicios planteados en el material de lectura.',
+            curso: '1A', materia: 'Matemática',
+            fecha_entrega: '2026-03-20'
+        });
+
+        res.json({
+            message: 'Datos de prueba (alumnos, notas, LMS) creados correctamente',
+            notas_cargadas: juan ? materias.length : 0
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: error.message });
@@ -144,7 +168,7 @@ app.post('/alumnos', verifyToken, authorize(['admin', 'director', 'secretario', 
 // Listar alumnos: Solo Personal académico y administrativo (admin, director, prof, preceptor, etc)
 app.get('/alumnos', verifyToken, authorize(['admin', 'director', 'secretario', 'jefe_preceptores', 'preceptor', 'profesor']), async (req, res) => {
     try {
-        const lista = await Alumno.findAll({ include: [Nota, Asistencia] });
+        const lista = await Alumno.findAll({ include: [{ model: Nota, as: 'Notas' }, { model: Asistencia, as: 'Asistencias' }] });
         res.json(lista);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -160,16 +184,16 @@ app.get('/boletin', verifyToken, authorize(['alumno', 'padre', 'admin']), async 
         if (req.user.role === 'alumno') {
             alumno = await Alumno.findOne({
                 where: { email: userEmail },
-                include: [Nota, Asistencia]
+                include: [{ model: Nota, as: 'Notas' }, { model: Asistencia, as: 'Asistencias' }]
             });
         } else if (req.user.role === 'padre') {
             alumno = await Alumno.findOne({
                 where: { email_padre: userEmail },
-                include: [Nota, Asistencia]
+                include: [{ model: Nota, as: 'Notas' }, { model: Asistencia, as: 'Asistencias' }]
             });
         } else {
             // Admin can see any? For now just as safeguard
-            alumno = await Alumno.findOne({ include: [Nota, Asistencia] });
+            alumno = await Alumno.findOne({ include: [{ model: Nota, as: 'Notas' }, { model: Asistencia, as: 'Asistencias' }] });
         }
 
         if (!alumno) {
