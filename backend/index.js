@@ -1,8 +1,12 @@
 const express = require('express');
+require('dotenv').config();
 const cors = require('cors');
 const sequelize = require('./config/db');
 const Alumno = require('./models/Alumno');
 const Nota = require('./models/Nota');
+const User = require('./models/User');
+const authRoutes = require('./routes/auth');
+const verifyToken = require('./middleware/authMiddleware');
 
 const app = express();
 app.use(cors());
@@ -18,8 +22,11 @@ sequelize.sync({ force: false }).then(() => {
     console.log('Tablas sincronizadas en la base de datos');
 }).catch(err => console.log('Error al sincronizar:', err));
 
-// Ruta para crear un alumno
-app.post('/alumnos', async (req, res) => {
+// Rutas de Autenticación
+app.use('/', authRoutes);
+
+// Ruta para crear un alumno (Protegida)
+app.post('/alumnos', verifyToken, async (req, res) => {
     try {
         const nuevoAlumno = await Alumno.create(req.body);
         res.status(201).json(nuevoAlumno);
@@ -28,8 +35,8 @@ app.post('/alumnos', async (req, res) => {
     }
 });
 
-// Ruta para listar alumnos
-app.get('/alumnos', async (req, res) => {
+// Ruta para listar alumnos (Protegida)
+app.get('/alumnos', verifyToken, async (req, res) => {
     const lista = await Alumno.findAll();
     res.json(lista);
 });
