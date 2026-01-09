@@ -19,7 +19,7 @@ const Material = sequelize.define('Material', {
         allowNull: false
     },
     tipo: {
-        type: DataTypes.ENUM('pdf', 'link', 'youtube', 'texto'),
+        type: DataTypes.ENUM('pdf', 'link', 'youtube', 'texto', 'video'),
         defaultValue: 'texto'
     },
     url: { // URL del archivo, video o link
