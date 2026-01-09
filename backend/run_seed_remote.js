@@ -19,7 +19,7 @@ async function runSeed() {
         const token = loginData.token;
         console.log('Token obtenido. Ejecutando Seed...');
 
-        const seedResponse = await fetch('https://backutn.onrender.com/test/fix-juan', {
+        const seedResponse = await fetch('https://backutn.onrender.com/test/seed', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

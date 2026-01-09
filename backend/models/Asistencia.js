@@ -7,10 +7,12 @@ const Asistencia = sequelize.define('Asistencia', {
         allowNull: false,
         defaultValue: DataTypes.NOW
     },
-    presente: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false
+    fecha: {
+        type: DataTypes.DATEONLY,
+        allowNull: false,
+        defaultValue: DataTypes.NOW
     },
+    // presente field removed in favor of 'estado' enum
     ciclo_lectivo: {
         type: DataTypes.INTEGER,
         defaultValue: new Date().getFullYear()
