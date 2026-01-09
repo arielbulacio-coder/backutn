@@ -220,9 +220,15 @@ app.post('/test/seed', verifyToken, authorize(['admin']), async (req, res) => {
             const notas = materias.map(m => ({
                 AlumnoId: alumno.id,
                 materia: m,
-                t1_p1: (Math.random() * 3 + 7).toFixed(2),
-                t1_p2: (Math.random() * 3 + 7).toFixed(2),
-                t2_p1: (Math.random() * 4 + 6).toFixed(2)
+                ciclo_lectivo: 2026,
+                t1_p1: (Math.random() * 2 + 7).toFixed(2),
+                t1_p2: (Math.random() * 2 + 7).toFixed(2),
+                t1_p3: (Math.random() * 2 + 7).toFixed(2),
+                t2_p1: (Math.random() * 3 + 6).toFixed(2),
+                t2_p2: (Math.random() * 3 + 6).toFixed(2),
+                t2_p3: null, // En curso
+                t3_p1: null,
+                final_cursada: null
             }));
             await Nota.bulkCreate(notas);
         }
