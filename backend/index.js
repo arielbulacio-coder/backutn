@@ -119,34 +119,30 @@ app.post('/test/seed', verifyToken, authorize(['admin']), async (req, res) => {
             }
         }
 
-        // 4. Materiales y Actividades de prueba (LMS)
+        // 4. Materiales y Actividades de prueba (LMS) - Para TODOS los sujetos
         await Material.destroy({ where: { curso: '1A' } });
         await Actividad.destroy({ where: { curso: '1A' } });
 
-        await Material.create({
-            titulo: 'Introducción a la Electrónica',
-            descripcion: 'Conceptos básicos, ley de ohm y potencia.',
-            curso: '1A', materia: 'Matemática', tipo: 'pdf',
-            url: 'https://example.com/intro.pdf'
-        });
+        for (const mat of materias) {
+            await Material.create({
+                titulo: `Material de ${mat}`,
+                descripcion: `Conceptos introductorios de ${mat} para el ciclo lectivo.`,
+                curso: '1A', materia: mat, tipo: 'pdf',
+                url: 'https://example.com/documento.pdf'
+            });
 
-        await Material.create({
-            titulo: 'Video: Circuitos en Serie',
-            descripcion: 'Explicación detallada con ejemplos prácticos.',
-            curso: '1A', materia: 'Matemática', tipo: 'youtube',
-            url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
-        });
-
-        await Actividad.create({
-            titulo: 'TP N°1: Cálculo de Resistencias',
-            descripcion: 'Resolver los ejercicios planteados en el material de lectura.',
-            curso: '1A', materia: 'Matemática',
-            fecha_entrega: '2026-03-20'
-        });
+            await Actividad.create({
+                titulo: `TP inicial de ${mat}`,
+                descripcion: `Tarea de diagnóstico de ${mat}.`,
+                curso: '1A', materia: mat,
+                fecha_entrega: '2026-03-30'
+            });
+        }
 
         res.json({
-            message: 'Datos de prueba (alumnos, notas, LMS) creados correctamente',
-            notas_cargadas: juan ? materias.length : 0
+            message: 'Datos de prueba (alumnos, notas, LMS exhaustivo) creados correctamente',
+            notas_cargadas: juan ? materias.length : 0,
+            lms_items: materias.length * 2
         });
     } catch (error) {
         console.error(error);
