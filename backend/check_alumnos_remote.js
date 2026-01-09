@@ -13,7 +13,7 @@ async function checkAlumnos() {
         const { token } = await loginResponse.json();
         console.log('Token OK.');
 
-        const cycles = [2025, 2026];
+        const cycles = [2025];
 
         for (const cycle of cycles) {
             console.log(`\n--- Fetching Alumnos for Cycle ${cycle} ---`);

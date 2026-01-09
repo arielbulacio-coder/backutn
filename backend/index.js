@@ -313,6 +313,7 @@ app.post('/test/seed', verifyToken, authorize(['admin']), async (req, res) => {
 
         res.json({
             message: 'Seed COMPLETO: Usuarios, Alumnos, Notas, LMS (Materiales/Actividaes) y Asistencias.',
+            version: 'v2-with-2025',
             alumnos_count: alumnos.length,
             lms_items: cursosSeed.length * materiasSeed.length * 4,
             asistencias_generadas: asistencias.length
