@@ -60,6 +60,61 @@ app.get('/users', verifyToken, authorize(['admin']), async (req, res) => {
     }
 });
 
+// --- SEED DE DATOS DE PRUEBA ---
+app.post('/test/seed', verifyToken, authorize(['admin']), async (req, res) => {
+    try {
+        const passwordHash = await bcrypt.hash('123456', 10);
+
+        // 1. Usuarios
+        const usersData = [
+            { email: 'profesor@utn.com', role: 'profesor' },
+            { email: 'preceptor@utn.com', role: 'preceptor' },
+            { email: 'director@utn.com', role: 'director' },
+            { email: 'alumno1@utn.com', role: 'alumno' },
+            { email: 'padre1@utn.com', role: 'padre' },
+        ];
+
+        for (const u of usersData) {
+            await User.findOrCreate({
+                where: { email: u.email },
+                defaults: { password: passwordHash, role: u.role }
+            });
+        }
+
+        // 2. Alumnos
+        const alumnosData = [
+            { nombre: 'Juan', apellido: 'Perez', email: 'alumno1@utn.com', legajo: 'L001', curso: '1A', email_padre: 'padre1@utn.com' },
+            { nombre: 'Maria', apellido: 'Lopez', email: 'maria@utn.com', legajo: 'L002', curso: '1A', email_padre: 'padre2@utn.com' },
+            { nombre: 'Carlos', apellido: 'Gomez', email: 'carlos@utn.com', legajo: 'L003', curso: '2B' },
+        ];
+
+        for (const a of alumnosData) {
+            await Alumno.findOrCreate({
+                where: { legajo: a.legajo },
+                defaults: a
+            });
+        }
+
+        // 3. Notas de prueba (Para Juan Perez en Matemática)
+        const juan = await Alumno.findOne({ where: { legajo: 'L001' } });
+        if (juan) {
+            await Nota.findOrCreate({
+                where: { AlumnoId: juan.id, materia: 'Matemática' },
+                defaults: {
+                    t1_p1: 8, t1_p2: 7, t1_p3: 9,
+                    t2_p1: 6, t2_p2: 5, t2_p3: 7,
+                    AlumnoId: juan.id, materia: 'Matemática'
+                }
+            });
+        }
+
+        res.json({ message: 'Datos de prueba creados correctamente' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- RUTAS DE ALUMNOS ---
 // Crear alumno: Solo Director, Secretario, Jefe de Preceptores, Admin
 app.post('/alumnos', verifyToken, authorize(['admin', 'director', 'secretario', 'jefe_preceptores']), async (req, res) => {

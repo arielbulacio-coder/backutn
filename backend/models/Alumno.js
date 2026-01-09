@@ -9,6 +9,11 @@ const Alumno = sequelize.define('Alumno', {
     curso: {
         type: DataTypes.ENUM('1A', '1B', '1C', '2A', '2B', '2C'),
         allowNull: true
+    },
+    email_padre: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        validate: { isEmail: true }
     }
 });
 
