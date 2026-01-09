@@ -19,7 +19,7 @@ async function runSeed() {
         const token = loginData.token;
         console.log('Token obtenido. Ejecutando Seed...');
 
-        const seedResponse = await fetch('https://backutn.onrender.com/test/seed', {
+        const seedResponse = await fetch('https://backutn.onrender.com/test/fix-juan', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -27,11 +27,16 @@ async function runSeed() {
             }
         });
 
+        if (!seedResponse.ok) {
+            const errText = await seedResponse.text();
+            throw new Error(`Seed failed: ${seedResponse.status} ${seedResponse.statusText} - ${errText}`);
+        }
+
         const seedData = await seedResponse.json();
-        console.log('Resultado:', seedData);
+        console.log('Resultado Exitoso:', seedData);
 
     } catch (error) {
-        console.error('Error:', error.message);
+        console.error('Error Final:', error.message);
     }
 }
 
