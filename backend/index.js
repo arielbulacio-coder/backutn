@@ -231,6 +231,20 @@ app.post('/test/seed', verifyToken, authorize(['admin']), async (req, res) => {
                 final_cursada: null
             }));
             await Nota.bulkCreate(notas);
+
+            // Si es Juan Perez, cargarle TAMBIEN notas de 2025 completas
+            if (alumno.legajo === 'L001') {
+                const notas2025 = materias.map(m => ({
+                    AlumnoId: alumno.id,
+                    materia: m,
+                    ciclo_lectivo: 2025, // Ciclo anterior
+                    t1_p1: 8, t1_p2: 9, t1_p3: 8,
+                    t2_p1: 7, t2_p2: 8, t2_p3: 8,
+                    t3_p1: 9, t3_p2: 9, t3_p3: 10,
+                    final_cursada: 9
+                }));
+                await Nota.bulkCreate(notas2025);
+            }
         }
 
         // 4. Materiales y Actividades de prueba (LMS) - Para VARIOS CURSOS
