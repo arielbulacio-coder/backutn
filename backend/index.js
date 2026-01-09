@@ -102,11 +102,11 @@ app.post('/test/seed', verifyToken, authorize(['admin']), async (req, res) => {
             }
         }
 
+        const materias = ['Matemática', 'Lengua', 'Física', 'Historia', 'Geografía', 'Inglés', 'Educación Física', 'Biología', 'Taller General'];
+
         // 3. Notas de prueba (Para Juan Perez en TODAS las materias)
         const juan = await Alumno.findOne({ where: { legajo: 'L001' } });
         if (juan) {
-            const materias = ['Matemática', 'Lengua', 'Física', 'Historia', 'Geografía', 'Inglés', 'Educación Física', 'Biología', 'Taller General'];
-
             // Limpiar notas previas para asegurar que el seed sea determinista
             await Nota.destroy({ where: { AlumnoId: juan.id } });
 
@@ -151,6 +151,27 @@ app.post('/test/seed', verifyToken, authorize(['admin']), async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api-debug', async (req, res) => {
+    try {
+        const uCount = await User.count();
+        const aCount = await Alumno.count();
+        const nCount = await Nota.count();
+        const mCount = await Material.count();
+        const actCount = await Actividad.count();
+        res.json({
+            status: 'online',
+            users: uCount,
+            alumnos: aCount,
+            notas: nCount,
+            materiales: mCount,
+            actividades: actCount,
+            time: new Date().toISOString()
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 
