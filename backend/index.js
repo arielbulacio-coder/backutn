@@ -104,19 +104,22 @@ app.post('/test/seed', verifyToken, authorize(['admin']), async (req, res) => {
             const materias = ['Matemática', 'Lengua', 'Física', 'Historia', 'Geografía', 'Inglés', 'Educación Física', 'Biología', 'Taller General'];
 
             for (const mat of materias) {
-                // Generar notas aleatorias realistas
                 const rand = (min, max) => (Math.random() * (max - min) + min).toFixed(2);
+                const gradeData = {
+                    t1_p1: rand(6, 10), t1_p2: rand(6, 10), t1_p3: rand(6, 10),
+                    t2_p1: rand(5, 9), t2_p2: rand(5, 9), t2_p3: rand(6, 10),
+                    t3_p1: rand(7, 10), t3_p2: rand(7, 10), t3_p3: rand(7, 10),
+                    final_anual: rand(7, 10),
+                    AlumnoId: juan.id, materia: mat
+                };
 
-                await Nota.findOrCreate({
+                const [nota, created] = await Nota.findOrCreate({
                     where: { AlumnoId: juan.id, materia: mat },
-                    defaults: {
-                        t1_p1: rand(6, 10), t1_p2: rand(6, 10), t1_p3: rand(6, 10),
-                        t2_p1: rand(5, 9), t2_p2: rand(5, 9), t2_p3: rand(6, 10),
-                        t3_p1: rand(7, 10), t3_p2: rand(7, 10), t3_p3: rand(7, 10),
-                        final_anual: rand(7, 10),
-                        AlumnoId: juan.id, materia: mat
-                    }
+                    defaults: gradeData
                 });
+                if (!created) {
+                    await nota.update(gradeData);
+                }
             }
         }
 
