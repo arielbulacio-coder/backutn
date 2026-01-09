@@ -15,6 +15,7 @@ app.use(express.json());
 const Asistencia = require('./models/Asistencia');
 const Material = require('./models/Material');
 const Actividad = require('./models/Actividad');
+const Entrega = require('./models/Entrega');
 const authorize = require('./middleware/roleMiddleware');
 
 // Establecer Relaciones
@@ -23,6 +24,11 @@ Nota.belongsTo(Alumno);
 
 Alumno.hasMany(Asistencia, { as: 'Asistencias' });
 Asistencia.belongsTo(Alumno);
+
+Actividad.hasMany(Entrega);
+Entrega.belongsTo(Actividad);
+Alumno.hasMany(Entrega);
+Entrega.belongsTo(Alumno);
 
 const bcrypt = require('bcryptjs');
 
@@ -346,6 +352,62 @@ app.get('/actividades', verifyToken, async (req, res) => {
         const actividades = await Actividad.findAll({ where: whereClause });
         console.log(`Found ${actividades.length} actividades`);
         res.json(actividades);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- RUTAS DE ENTREGAS ---
+// Subir entrega (Alumno)
+app.post('/entregas', verifyToken, authorize(['alumno']), async (req, res) => {
+    try {
+        const userEmail = req.user.email;
+        const alumno = await Alumno.findOne({ where: { email: userEmail } });
+
+        if (!alumno) return res.status(404).json({ message: 'Alumno no encontrado para este usuario' });
+
+        const { ActividadId, archivo_url, comentario } = req.body;
+
+        // Check if already submitted? Maybe allow multiple for now
+
+        const entrega = await Entrega.create({
+            AlumnoId: alumno.id,
+            ActividadId,
+            archivo_url,
+            comentario
+        });
+        res.status(201).json(entrega);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Ver entregas (Profesor: todas de una actividad / Alumno: las suyas)
+app.get('/entregas', verifyToken, async (req, res) => {
+    try {
+        const { ActividadId } = req.query;
+        let whereClause = {};
+
+        if (ActividadId) whereClause.ActividadId = ActividadId;
+
+        if (req.user.role === 'alumno') {
+            const alumno = await Alumno.findOne({ where: { email: req.user.email } });
+            if (!alumno) return res.json([]);
+            whereClause.AlumnoId = alumno.id;
+        } else if (['profesor', 'admin'].includes(req.user.role)) {
+            // Can see all for the activity, or filter
+        } else {
+            return res.status(403).json({ message: 'No autorizado' });
+        }
+
+        const entregas = await Entrega.findAll({
+            where: whereClause,
+            include: [
+                { model: Alumno, attributes: ['nombre', 'apellido'] },
+                { model: Actividad, attributes: ['titulo'] }
+            ]
+        });
+        res.json(entregas);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
