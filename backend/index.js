@@ -246,7 +246,7 @@ app.post('/test/seed', verifyToken, authorize(['admin']), async (req, res) => {
                 await Material.create({
                     titulo: `Guía Práctica ${mat} - Parte 1`,
                     descripcion: `Ejercicios resueltos de ${mat}.`,
-                    curso: curso, materia: mat, tipo: 'video',
+                    curso: curso, materia: mat, tipo: 'youtube',
                     url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
                 });
 
