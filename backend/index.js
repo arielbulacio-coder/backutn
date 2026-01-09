@@ -88,6 +88,90 @@ app.get('/users', verifyToken, authorize(['admin']), async (req, res) => {
 });
 
 // --- SEED DE DATOS DE PRUEBA ---
+app.post('/test/fix-juan', verifyToken, authorize(['admin']), async (req, res) => {
+    try {
+        console.log('Ejecutando Fix Juan Perez (2A)...');
+
+        // 1. Crear o Buscar a Juan Pérez (Upsert)
+        const [alumno, created] = await Alumno.findOrCreate({
+            where: { legajo: '12345' },
+            defaults: {
+                nombre: 'Juan',
+                apellido: 'Pérez',
+                email: 'juan.perez@alumno.utn.edu.ar',
+                email_padre: 'padre.perez@gmail.com',
+                dni: '40123456',
+                curso: '2° A'
+            }
+        });
+
+        // Asegurar curso correcto
+        if (!created || alumno.curso !== '2° A') {
+            await alumno.update({ curso: '2° A' });
+        }
+
+        // Crear usuario login si no existe (Password 123456)
+        const passwordHash = await bcrypt.hash('123456', 10);
+        await User.findOrCreate({
+            where: { email: 'juan.perez@alumno.utn.edu.ar' },
+            defaults: { password: passwordHash, role: 'alumno' }
+        });
+        await User.findOrCreate({
+            where: { email: 'padre.perez@gmail.com' },
+            defaults: { password: passwordHash, role: 'padre' }
+        });
+
+        // 2. Cargar Trayectoria (Año Anterior: 1° A - 2025)
+        await HistorialAcademico.destroy({ where: { AlumnoId: alumno.id } });
+
+        await HistorialAcademico.create({
+            ciclo_lectivo: 2025,
+            curso: '1° A',
+            condicion: 'promovido',
+            promedio_general: 8.50,
+            observaciones: 'Excelente compañero. Destacado en Taller.',
+            AlumnoId: alumno.id
+        });
+
+        // 3. Cargar Notas Actuales (2° A - 2026)
+        await Nota.destroy({ where: { AlumnoId: alumno.id } });
+
+        const materias2do = [
+            'Matemática II', 'Física II', 'Lengua y Literatura II', 'Inglés II',
+            'Historia', 'Geografía', 'Taller Pre-Profesional', 'Dibujo Técnico'
+        ];
+
+        const notas = materias2do.map(materia => ({
+            AlumnoId: alumno.id,
+            materia: materia,
+            // 1er Trimestre (Completos y buenos)
+            t1_p1: (Math.random() * 1.5 + 8).toFixed(2),
+            t1_p2: (Math.random() * 1.5 + 8).toFixed(2),
+            t1_p3: (Math.random() * 1.5 + 8).toFixed(2),
+            // 2do Trimestre (En curso, parciales)
+            t2_p1: (Math.random() * 2 + 7).toFixed(2),
+            t2_p2: null,
+            t2_p3: null,
+            // 3er Trimestre (Vacío)
+            t3_p1: null, t3_p2: null, t3_p3: null,
+            // Finales provisionales vacíos
+            final_cursada: null
+        }));
+
+        await Nota.bulkCreate(notas);
+
+        res.json({
+            message: 'Juan Pérez actualizado a 2° A con trayectoria y notas.',
+            alumno: alumno.nombre + ' ' + alumno.apellido,
+            curso: alumno.curso
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.post('/test/seed', verifyToken, authorize(['admin']), async (req, res) => {
     try {
         const passwordHash = await bcrypt.hash('123456', 10);
