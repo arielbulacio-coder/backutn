@@ -90,7 +90,7 @@ app.get('/users', verifyToken, authorize(['admin']), async (req, res) => {
 // --- SEED DE DATOS DE PRUEBA ---
 app.post('/test/fix-juan', verifyToken, authorize(['admin']), async (req, res) => {
     try {
-        console.log('Ejecutando Fix Juan Perez (2A)...');
+        console.log('Ejecutando Fix Juan Perez (2A) - SOLO ACADEMICO...');
 
         // 1. Crear o Buscar a Juan Pérez (Upsert)
         const [alumno, created] = await Alumno.findOrCreate({
@@ -109,17 +109,6 @@ app.post('/test/fix-juan', verifyToken, authorize(['admin']), async (req, res) =
         if (!created || alumno.curso !== '2° A') {
             await alumno.update({ curso: '2° A' });
         }
-
-        // Crear usuario login si no existe (Password 123456)
-        const passwordHash = await bcrypt.hash('123456', 10);
-        await User.findOrCreate({
-            where: { email: 'juan.perez@alumno.utn.edu.ar' },
-            defaults: { password: passwordHash, role: 'alumno' }
-        });
-        await User.findOrCreate({
-            where: { email: 'padre.perez@gmail.com' },
-            defaults: { password: passwordHash, role: 'padre' }
-        });
 
         // 2. Cargar Trayectoria (Año Anterior: 1° A - 2025)
         await HistorialAcademico.destroy({ where: { AlumnoId: alumno.id } });
@@ -161,7 +150,7 @@ app.post('/test/fix-juan', verifyToken, authorize(['admin']), async (req, res) =
         await Nota.bulkCreate(notas);
 
         res.json({
-            message: 'Juan Pérez actualizado a 2° A con trayectoria y notas.',
+            message: 'Juan Pérez actualizado a 2° A con trayectoria y notas (SIN USUARIOS).',
             alumno: alumno.nombre + ' ' + alumno.apellido,
             curso: alumno.curso
         });
