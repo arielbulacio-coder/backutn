@@ -81,23 +81,29 @@ app.get('/alumnos', verifyToken, authorize(['admin', 'director', 'secretario', '
 // Cargar nota: Profesor, Admin
 app.post('/notas', verifyToken, authorize(['admin', 'profesor', 'director']), async (req, res) => {
     try {
-        const { AlumnoId, valor, materia, trimestre } = req.body;
+        const { AlumnoId, materia, ...grades } = req.body;
+
+        if (!AlumnoId || !materia) {
+            return res.status(400).json({ message: 'Faltan datos requeridos (AlumnoId, materia)' });
+        }
+
         const alumno = await Alumno.findByPk(AlumnoId);
         if (!alumno) return res.status(404).json({ message: 'Alumno no encontrado' });
 
-        // Buscar si ya existe la nota
-        const existingNota = await Nota.findOne({
-            where: { AlumnoId, materia, trimestre }
+        // Buscar registro único por alumno y materia
+        let notaRecord = await Nota.findOne({
+            where: { AlumnoId, materia }
         });
 
-        if (existingNota) {
-            existingNota.valor = valor;
-            await existingNota.save();
-            return res.status(200).json(existingNota);
+        if (notaRecord) {
+            // Actualizar campos recibidos
+            await notaRecord.update(grades);
+            return res.status(200).json(notaRecord);
+        } else {
+            // Crear nuevo
+            notaRecord = await Nota.create({ AlumnoId, materia, ...grades });
+            return res.status(201).json(notaRecord);
         }
-
-        const nuevaNota = await Nota.create({ valor, materia, trimestre, AlumnoId });
-        res.status(201).json(nuevaNota);
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
