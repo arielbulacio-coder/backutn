@@ -213,10 +213,75 @@ app.post('/test/seed', verifyToken, authorize(['admin']), async (req, res) => {
             await Nota.bulkCreate(notas);
         }
 
+        // 4. Materiales y Actividades de prueba (LMS) - Para VARIOS CURSOS
+        await Material.destroy({ where: {} }); // Limpiar todo LMS para evitar duplicados
+        await Actividad.destroy({ where: {} });
+
+        const cursosSeed = ['1A', '2A', '2B'];
+        const materiasSeed = ['Matemática', 'Física', 'Historia', 'Inglés', 'Taller'];
+
+        for (const curso of cursosSeed) {
+            for (const mat of materiasSeed) {
+                // MATERIALES
+                await Material.create({
+                    titulo: `Introducción a ${mat}`,
+                    descripcion: `Material fundamental para el curso de ${mat}.`,
+                    curso: curso, materia: mat, tipo: 'pdf',
+                    url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'
+                });
+                await Material.create({
+                    titulo: `Guía Práctica ${mat} - Parte 1`,
+                    descripcion: `Ejercicios resueltos de ${mat}.`,
+                    curso: curso, materia: mat, tipo: 'video',
+                    url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+                });
+
+                // ACTIVIDADES
+                await Actividad.create({
+                    titulo: `TP 1: Conceptos de ${mat}`,
+                    descripcion: `Resolver cuestionario sobre la unidad 1 de ${mat}.`,
+                    curso: curso, materia: mat,
+                    fecha_entrega: '2026-04-15'
+                });
+                await Actividad.create({
+                    titulo: `Proyecto Grupal ${mat}`,
+                    descripcion: `Investigación y presentación sobre ${mat}.`,
+                    curso: curso, materia: mat,
+                    fecha_entrega: '2026-05-20'
+                });
+            }
+        }
+
+        // 5. Asistencias de prueba (últimos 5 días)
+        const asistencias = [];
+        const alumnos = await Alumno.findAll();
+        const hoy = new Date();
+
+        for (let i = 0; i < 5; i++) {
+            const fecha = new Date();
+            fecha.setDate(hoy.getDate() - i);
+            const fechaStr = fecha.toISOString().split('T')[0];
+
+            for (const alu of alumnos) {
+                // Random status
+                const estados = ['presente', 'presente', 'presente', 'ausente', 'tarde'];
+                const estado = estados[Math.floor(Math.random() * estados.length)];
+
+                asistencias.push({
+                    AlumnoId: alu.id,
+                    fecha: fechaStr,
+                    estado: estado,
+                    observacion: estado === 'ausente' ? 'Gripe' : ''
+                });
+            }
+        }
+        await Asistencia.bulkCreate(asistencias);
+
         res.json({
-            message: 'Datos de prueba generados.',
-            alumnos_procesados: alumnosData.length,
-            nuevos: createdCount
+            message: 'Seed COMPLETO: Usuarios, Alumnos, Notas, LMS (Materiales/Actividaes) y Asistencias.',
+            alumnos_count: alumnos.length,
+            lms_items: cursosSeed.length * materiasSeed.length * 4,
+            asistencias_generadas: asistencias.length
         });
     } catch (error) {
         console.error(error);
