@@ -537,13 +537,28 @@ app.post('/notas', verifyToken, authorize(['admin', 'profesor', 'director']), as
             where: { AlumnoId, materia, ciclo_lectivo }
         });
 
+        // Filter only allowed fields to prevent errors with extra data
+        const ALLOWED_FIELDS = [
+            't1_p1', 't1_p2', 't1_p3',
+            't2_p1', 't2_p2', 't2_p3',
+            't3_p1', 't3_p2', 't3_p3',
+            'final_anual', 'recup_diciembre', 'recup_febrero', 'final_cursada'
+        ];
+
+        const filteredGrades = {};
+        Object.keys(grades).forEach(key => {
+            if (ALLOWED_FIELDS.includes(key)) {
+                filteredGrades[key] = grades[key];
+            }
+        });
+
         if (notaRecord) {
             // Actualizar campos recibidos
-            await notaRecord.update(grades);
+            await notaRecord.update(filteredGrades);
             return res.status(200).json(notaRecord);
         } else {
             // Crear nuevo con ciclo lectivo explícito
-            notaRecord = await Nota.create({ AlumnoId, materia, ciclo_lectivo, ...grades });
+            notaRecord = await Nota.create({ AlumnoId, materia, ciclo_lectivo, ...filteredGrades });
             return res.status(201).json(notaRecord);
         }
     } catch (error) {

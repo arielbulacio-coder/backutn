@@ -33,7 +33,10 @@ async function runSeed() {
         }
 
         const seedData = await seedResponse.json();
-        console.log('Resultado Exitoso:', seedData);
+        console.log('*** SEED RESULT ***');
+        console.log('VERSION:', seedData.version || 'OLD_VERSION');
+        console.log('Message:', seedData.message);
+        console.log('Alumnos:', seedData.alumnos_count);
 
     } catch (error) {
         console.error('Error Final:', error.message);
