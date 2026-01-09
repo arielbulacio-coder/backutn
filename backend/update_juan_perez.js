@@ -6,7 +6,7 @@ const Nota = require('./models/Nota');
 async function ensureJuanPerez() {
     try {
         await sequelize.authenticate();
-        console.log('Conexión DB OK.');
+        console.log('Conexión DB OK. Host:', sequelize.config.host);
 
         // 1. Crear o Buscar a Juan Pérez (Upsert)
         const [alumno, created] = await Alumno.findOrCreate({
