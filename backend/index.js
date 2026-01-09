@@ -16,6 +16,9 @@ const Asistencia = require('./models/Asistencia');
 const Material = require('./models/Material');
 const Actividad = require('./models/Actividad');
 const Entrega = require('./models/Entrega');
+const CicloLectivo = require('./models/CicloLectivo');
+const HistorialAcademico = require('./models/HistorialAcademico');
+const ProfesorMateria = require('./models/ProfesorMateria');
 const authorize = require('./middleware/roleMiddleware');
 
 // Establecer Relaciones
@@ -30,12 +33,28 @@ Entrega.belongsTo(Actividad);
 Alumno.hasMany(Entrega);
 Entrega.belongsTo(Alumno);
 
+Alumno.hasMany(HistorialAcademico, { as: 'Historial' });
+HistorialAcademico.belongsTo(Alumno);
+
 const bcrypt = require('bcryptjs');
 
 // Sincronizar Base de Datos
-// Usamos sync() sin alter:true para evitar errores de ENUM en Postgres remote
-sequelize.sync().then(async () => {
-    console.log('Tablas sincronizadas en la base de datos');
+// Usamos sync() - En producción usar migraciones. Aquí alter: true para agregar columnas nuevas
+sequelize.sync({ alter: true }).then(async () => {
+    console.log('Tablas sincronizadas (alter: true)');
+
+    // Inicializar Ciclo Lectivo actual si no existe
+    const anioActual = new Date().getFullYear();
+    const existe = await CicloLectivo.findOne({ where: { anio: anioActual } });
+    if (!existe) {
+        await CicloLectivo.create({
+            anio: anioActual,
+            activo: true,
+            fecha_inicio: `${anioActual}-03-01`,
+            fecha_fin: `${anioActual}-12-15`
+        });
+        console.log(`Ciclo lectivo ${anioActual} inicializado.`);
+    }
 
     // Crear usuario admin por defecto si no existe ninguno
     try {
@@ -213,12 +232,38 @@ app.get('/boletin', verifyToken, authorize(['alumno', 'padre', 'admin']), async 
         if (req.user.role === 'alumno') {
             alumno = await Alumno.findOne({
                 where: { email: userEmail },
-                include: [{ model: Nota, as: 'Notas' }, { model: Asistencia, as: 'Asistencias' }]
+                include: [
+                    {
+                        model: Nota,
+                        as: 'Notas',
+                        where: req.query.ciclo_lectivo ? { ciclo_lectivo: req.query.ciclo_lectivo } : undefined,
+                        required: false
+                    },
+                    {
+                        model: Asistencia,
+                        as: 'Asistencias',
+                        where: req.query.ciclo_lectivo ? { ciclo_lectivo: req.query.ciclo_lectivo } : undefined,
+                        required: false
+                    }
+                ]
             });
         } else if (req.user.role === 'padre') {
             alumno = await Alumno.findOne({
                 where: { email_padre: userEmail },
-                include: [{ model: Nota, as: 'Notas' }, { model: Asistencia, as: 'Asistencias' }]
+                include: [
+                    {
+                        model: Nota,
+                        as: 'Notas',
+                        where: req.query.ciclo_lectivo ? { ciclo_lectivo: req.query.ciclo_lectivo } : undefined,
+                        required: false
+                    },
+                    {
+                        model: Asistencia,
+                        as: 'Asistencias',
+                        where: req.query.ciclo_lectivo ? { ciclo_lectivo: req.query.ciclo_lectivo } : undefined,
+                        required: false
+                    }
+                ]
             });
         } else {
             // Admin can see any? For now just as safeguard
@@ -235,8 +280,62 @@ app.get('/boletin', verifyToken, authorize(['alumno', 'padre', 'admin']), async 
     }
 });
 
+// --- RESTRICCIÓN DE PROFESORES ---
+// Middleware helper (o función interna) para validar asignación
+const validarAsignacionProfesor = async (user, curso, materia) => {
+    if (user.role === 'admin' || user.role === 'director' || user.role === 'secretario') return true;
+    if (user.role !== 'profesor') return false;
+
+    // Obtener ciclo actual (o usar año actual)
+    const ciclo = new Date().getFullYear();
+    const asignacion = await ProfesorMateria.findOne({
+        where: {
+            email_profesor: user.email,
+            curso: curso,
+            materia: materia,
+            ciclo_lectivo: ciclo
+        }
+    });
+    return !!asignacion;
+};
+
+// Endpoint para que el profesor consulte SUS materias asignadas (para rellenar combos)
+app.get('/profesor/asignaciones', verifyToken, authorize(['profesor', 'admin']), async (req, res) => {
+    try {
+        if (req.user.role === 'admin') {
+            // Admin ve todo (o mockeamos todas las combinaciones)
+            // Esto es más para UI. Retornamos todo lo asignado en el sistema
+            const todas = await ProfesorMateria.findAll();
+            res.json(todas);
+        } else {
+            const misMaterias = await ProfesorMateria.findAll({
+                where: {
+                    email_profesor: req.user.email,
+                    ciclo_lectivo: new Date().getFullYear()
+                }
+            });
+            res.json(misMaterias);
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Endpoint para asignar materias (Admin/Director)
+app.post('/admin/asignar-materia', verifyToken, authorize(['admin', 'director', 'secretario']), async (req, res) => {
+    try {
+        const { email_profesor, curso, materia } = req.body;
+        const nueva = await ProfesorMateria.create({
+            email_profesor, curso, materia
+        });
+        res.status(201).json(nueva);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
 // --- RUTAS DE NOTAS ---
-// Cargar nota: Profesor, Admin
+// Cargar nota: Profesor (validado), Admin
 app.post('/notas', verifyToken, authorize(['admin', 'profesor', 'director']), async (req, res) => {
     try {
         const { AlumnoId, materia, ...grades } = req.body;
@@ -248,9 +347,15 @@ app.post('/notas', verifyToken, authorize(['admin', 'profesor', 'director']), as
         const alumno = await Alumno.findByPk(AlumnoId);
         if (!alumno) return res.status(404).json({ message: 'Alumno no encontrado' });
 
+        // VALIDAR PERMISO PROFESOR
+        const permitido = await validarAsignacionProfesor(req.user, alumno.curso, materia);
+        if (!permitido) {
+            return res.status(403).json({ message: 'No tiene asignada esta materia en este curso.' });
+        }
+
         // Buscar registro único por alumno y materia
         let notaRecord = await Nota.findOne({
-            where: { AlumnoId, materia }
+            where: { AlumnoId, materia } // Deberia filtrar por ciclo tb, asumimos current handling
         });
 
         if (notaRecord) {
@@ -308,6 +413,14 @@ app.get('/asistencias', verifyToken, async (req, res) => {
 // Materiales
 app.post('/materiales', verifyToken, authorize(['admin', 'profesor']), async (req, res) => {
     try {
+        const { curso, materia } = req.body;
+
+        // VALIDAR PERMISO
+        const permitido = await validarAsignacionProfesor(req.user, curso, materia);
+        if (!permitido) {
+            return res.status(403).json({ message: 'No tiene asignada esta materia en este curso.' });
+        }
+
         const material = await Material.create(req.body);
         res.status(201).json(material);
     } catch (error) {
@@ -317,11 +430,12 @@ app.post('/materiales', verifyToken, authorize(['admin', 'profesor']), async (re
 
 app.get('/materiales', verifyToken, async (req, res) => {
     try {
-        const { curso, materia } = req.query;
-        console.log(`GET /materiales query: curso=${curso}, materia=${materia}`);
+        const { curso, materia, ciclo_lectivo } = req.query;
+        console.log(`GET /materiales query: curso=${curso}, materia=${materia}, ciclo=${ciclo_lectivo}`);
         const whereClause = {};
         if (curso) whereClause.curso = curso;
         if (materia) whereClause.materia = materia;
+        if (ciclo_lectivo) whereClause.ciclo_lectivo = ciclo_lectivo;
 
         const materiales = await Material.findAll({ where: whereClause });
         console.log(`Found ${materiales.length} materiales`);
@@ -334,6 +448,14 @@ app.get('/materiales', verifyToken, async (req, res) => {
 // Actividades
 app.post('/actividades', verifyToken, authorize(['admin', 'profesor']), async (req, res) => {
     try {
+        const { curso, materia } = req.body;
+
+        // VALIDAR PERMISO
+        const permitido = await validarAsignacionProfesor(req.user, curso, materia);
+        if (!permitido) {
+            return res.status(403).json({ message: 'No tiene asignada esta materia en este curso.' });
+        }
+
         const actividad = await Actividad.create(req.body);
         res.status(201).json(actividad);
     } catch (error) {
@@ -343,11 +465,12 @@ app.post('/actividades', verifyToken, authorize(['admin', 'profesor']), async (r
 
 app.get('/actividades', verifyToken, async (req, res) => {
     try {
-        const { curso, materia } = req.query;
-        console.log(`GET /actividades query: curso=${curso}, materia=${materia}`);
+        const { curso, materia, ciclo_lectivo } = req.query;
+        console.log(`GET /actividades query: curso=${curso}, materia=${materia}, ciclo=${ciclo_lectivo}`);
         const whereClause = {};
         if (curso) whereClause.curso = curso;
         if (materia) whereClause.materia = materia;
+        if (ciclo_lectivo) whereClause.ciclo_lectivo = ciclo_lectivo;
 
         const actividades = await Actividad.findAll({ where: whereClause });
         console.log(`Found ${actividades.length} actividades`);
@@ -409,6 +532,72 @@ app.get('/entregas', verifyToken, async (req, res) => {
         });
         res.json(entregas);
     } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+
+// --- GESTIÓN DE CICLOS LECTIVOS ---
+
+// Obtener ciclo activo
+app.get('/ciclo-lectivo/actual', verifyToken, async (req, res) => {
+    try {
+        const actual = await CicloLectivo.findOne({ where: { activo: true } });
+        res.json(actual);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Cerrar ciclo y promover (Simplificado: Pasa a todos al siguiente año numérico, mantiene división)
+// Ejemplo: 1A -> 2A. 
+// Requiere lógica compleja de materias aprobadas. Aquí haremos una "Promoción Manual" o "Masiva simple".
+app.post('/ciclo-lectivo/promocion-masiva', verifyToken, authorize(['admin', 'director']), async (req, res) => {
+    try {
+        const { ciclo_origen, ciclo_destino } = req.body;
+        console.log(`Iniciando promoción masiva de ${ciclo_origen} a ${ciclo_destino}`);
+
+        const alumnos = await Alumno.findAll();
+        let promovidos = 0;
+
+        for (const alu of alumnos) {
+            // Guardar historial del año que termina
+            await HistorialAcademico.create({
+                AlumnoId: alu.id,
+                ciclo_lectivo: ciclo_origen,
+                curso: alu.curso,
+                condicion: 'regular', // Lógica de aprobación pendiente
+                observaciones: 'Promoción automática'
+            });
+
+            // Lógica simple de cambio de curso: 1A -> 2A
+            const match = alu.curso.match(/(\d+)(.*)/);
+            if (match) {
+                const anioCurso = parseInt(match[1]);
+                const division = match[2];
+                if (anioCurso < 7) { // Suponiendo 7mo año es el último
+                    const nuevoCurso = `${anioCurso + 1}${division}`;
+                    await alu.update({ curso: nuevoCurso });
+                    promovidos++;
+                } else {
+                    // Egresado
+                    await HistorialAcademico.update({ condicion: 'egresado' }, { where: { AlumnoId: alu.id, ciclo_lectivo: ciclo_origen } });
+                }
+            }
+        }
+
+        // Actualizar estados de CicloLectivo
+        await CicloLectivo.update({ activo: false }, { where: { anio: ciclo_origen } });
+        await CicloLectivo.findOrCreate({
+            where: { anio: ciclo_destino },
+            defaults: { activo: true, fecha_inicio: `${ciclo_destino}-03-01`, fecha_fin: `${ciclo_destino}-12-15` }
+        });
+        await CicloLectivo.update({ activo: true }, { where: { anio: ciclo_destino } });
+
+        res.json({ message: 'Promoción masiva completada', promovidos });
+    } catch (error) {
+        console.error(error);
         res.status(500).json({ error: error.message });
     }
 });

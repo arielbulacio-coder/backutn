@@ -7,6 +7,14 @@ const Asistencia = sequelize.define('Asistencia', {
         allowNull: false,
         defaultValue: DataTypes.NOW
     },
+    presente: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    ciclo_lectivo: {
+        type: DataTypes.INTEGER,
+        defaultValue: new Date().getFullYear()
+    },
     estado: {
         type: DataTypes.ENUM('presente', 'ausente', 'tarde', 'justificado'),
         defaultValue: 'presente'

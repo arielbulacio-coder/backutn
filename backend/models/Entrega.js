@@ -10,6 +10,10 @@ const Entrega = sequelize.define('Entrega', {
         type: DataTypes.STRING,
         allowNull: true
     },
+    ciclo_lectivo: {
+        type: DataTypes.INTEGER,
+        defaultValue: new Date().getFullYear()
+    },
     comentario: {
         type: DataTypes.TEXT,
         allowNull: true

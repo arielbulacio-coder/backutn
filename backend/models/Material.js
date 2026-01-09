@@ -25,6 +25,10 @@ const Material = sequelize.define('Material', {
     url: { // URL del archivo, video o link
         type: DataTypes.STRING,
         allowNull: true
+    },
+    ciclo_lectivo: {
+        type: DataTypes.INTEGER,
+        defaultValue: new Date().getFullYear()
     }
 });
 

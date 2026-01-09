@@ -1,26 +1,18 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 
-const Actividad = sequelize.define('Actividad', {
-    titulo: {
+const ProfesorMateria = sequelize.define('ProfesorMateria', {
+    email_profesor: {
         type: DataTypes.STRING,
-        allowNull: false
-    },
-    descripcion: {
-        type: DataTypes.TEXT,
         allowNull: false
     },
     curso: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING, // "5B"
         allowNull: false
     },
     materia: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING, // "Matemática"
         allowNull: false
-    },
-    fecha_entrega: {
-        type: DataTypes.DATEONLY,
-        allowNull: true
     },
     ciclo_lectivo: {
         type: DataTypes.INTEGER,
@@ -28,4 +20,4 @@ const Actividad = sequelize.define('Actividad', {
     }
 });
 
-module.exports = Actividad;
+module.exports = ProfesorMateria;

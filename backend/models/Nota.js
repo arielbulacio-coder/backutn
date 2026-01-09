@@ -4,6 +4,15 @@ const sequelize = require('../config/db');
 const Nota = sequelize.define('Nota', {
     materia: { type: DataTypes.STRING, allowNull: false },
 
+    final_cursada: {
+        type: DataTypes.FLOAT,
+        allowNull: true
+    },
+    ciclo_lectivo: {
+        type: DataTypes.INTEGER,
+        defaultValue: new Date().getFullYear()
+    },
+
     // Trimestre 1
     t1_p1: { type: DataTypes.DECIMAL(4, 2) },
     t1_p2: { type: DataTypes.DECIMAL(4, 2) },
