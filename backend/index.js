@@ -89,10 +89,13 @@ app.post('/test/seed', verifyToken, authorize(['admin']), async (req, res) => {
         ];
 
         for (const a of alumnosData) {
-            await Alumno.findOrCreate({
+            const [alumno, created] = await Alumno.findOrCreate({
                 where: { legajo: a.legajo },
                 defaults: a
             });
+            if (!created) {
+                await alumno.update(a);
+            }
         }
 
         // 3. Notas de prueba (Para Juan Perez en TODAS las materias)
