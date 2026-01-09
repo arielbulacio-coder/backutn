@@ -18,9 +18,9 @@ Asistencia.belongsTo(Alumno);
 
 async function forceSync() {
     try {
-        console.log('Sincronizando modelos (DESTRUCTIVE FORCE)...');
+        console.log('Sincronizando modelos...');
         // Alter matching remote config
-        await sequelize.sync({ force: true });
+        await sequelize.sync({ alter: true });
         console.log('Sincronización terminada.');
     } catch (e) {
         console.error('Error durante sync:', e);
