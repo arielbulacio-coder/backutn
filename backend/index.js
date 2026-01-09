@@ -95,17 +95,26 @@ app.post('/test/seed', verifyToken, authorize(['admin']), async (req, res) => {
             });
         }
 
-        // 3. Notas de prueba (Para Juan Perez en Matemática)
+        // 3. Notas de prueba (Para Juan Perez en TODAS las materias)
         const juan = await Alumno.findOne({ where: { legajo: 'L001' } });
         if (juan) {
-            await Nota.findOrCreate({
-                where: { AlumnoId: juan.id, materia: 'Matemática' },
-                defaults: {
-                    t1_p1: 8, t1_p2: 7, t1_p3: 9,
-                    t2_p1: 6, t2_p2: 5, t2_p3: 7,
-                    AlumnoId: juan.id, materia: 'Matemática'
-                }
-            });
+            const materias = ['Matemática', 'Lengua', 'Física', 'Historia', 'Geografía', 'Inglés', 'Educación Física', 'Biología', 'Taller General'];
+
+            for (const mat of materias) {
+                // Generar notas aleatorias realistas
+                const rand = (min, max) => (Math.random() * (max - min) + min).toFixed(2);
+
+                await Nota.findOrCreate({
+                    where: { AlumnoId: juan.id, materia: mat },
+                    defaults: {
+                        t1_p1: rand(6, 10), t1_p2: rand(6, 10), t1_p3: rand(6, 10),
+                        t2_p1: rand(5, 9), t2_p2: rand(5, 9), t2_p3: rand(6, 10),
+                        t3_p1: rand(7, 10), t3_p2: rand(7, 10), t3_p3: rand(7, 10),
+                        final_anual: rand(7, 10),
+                        AlumnoId: juan.id, materia: mat
+                    }
+                });
+            }
         }
 
         res.json({ message: 'Datos de prueba creados correctamente' });
@@ -126,8 +135,8 @@ app.post('/alumnos', verifyToken, authorize(['admin', 'director', 'secretario', 
     }
 });
 
-// Listar alumnos: Personal académico y administrativo
-app.get('/alumnos', verifyToken, authorize(['admin', 'director', 'secretario', 'jefe_preceptores', 'preceptor', 'profesor']), async (req, res) => {
+// Listar alumnos: Personal académico y administrativo, y propios alumnos/padres (filtrado en front o back)
+app.get('/alumnos', verifyToken, authorize(['admin', 'director', 'secretario', 'jefe_preceptores', 'preceptor', 'profesor', 'alumno', 'padre']), async (req, res) => {
     const lista = await Alumno.findAll({ include: [Nota, Asistencia] });
     res.json(lista);
 });
