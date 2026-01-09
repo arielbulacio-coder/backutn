@@ -13,6 +13,8 @@ app.use(cors());
 app.use(express.json());
 
 const Asistencia = require('./models/Asistencia');
+const Material = require('./models/Material');
+const Actividad = require('./models/Actividad');
 const authorize = require('./middleware/roleMiddleware');
 
 // Establecer Relaciones
@@ -25,8 +27,8 @@ Asistencia.belongsTo(Alumno);
 const bcrypt = require('bcryptjs');
 
 // Sincronizar Base de Datos
-// { force: false } evita que se borren los datos cada vez que reinicias
-sequelize.sync({ alter: true }).then(async () => {
+// Usamos sync() sin alter:true para evitar errores de ENUM en Postgres remote
+sequelize.sync().then(async () => {
     console.log('Tablas sincronizadas en la base de datos');
 
     // Crear usuario admin por defecto si no existe ninguno
@@ -283,9 +285,6 @@ app.post('/asistencias', verifyToken, authorize(['admin', 'preceptor', 'jefe_pre
     }
 });
 
-const Material = require('./models/Material');
-const Actividad = require('./models/Actividad');
-
 // ... (existing routes)
 
 app.get('/asistencias', verifyToken, async (req, res) => {
@@ -312,12 +311,14 @@ app.post('/materiales', verifyToken, authorize(['admin', 'profesor']), async (re
 
 app.get('/materiales', verifyToken, async (req, res) => {
     try {
-        // Filtros opcionales por query string: ?curso=1A&materia=Matemática
+        const { curso, materia } = req.query;
+        console.log(`GET /materiales query: curso=${curso}, materia=${materia}`);
         const whereClause = {};
-        if (req.query.curso) whereClause.curso = req.query.curso;
-        if (req.query.materia) whereClause.materia = req.query.materia;
+        if (curso) whereClause.curso = curso;
+        if (materia) whereClause.materia = materia;
 
         const materiales = await Material.findAll({ where: whereClause });
+        console.log(`Found ${materiales.length} materiales`);
         res.json(materiales);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -336,11 +337,14 @@ app.post('/actividades', verifyToken, authorize(['admin', 'profesor']), async (r
 
 app.get('/actividades', verifyToken, async (req, res) => {
     try {
+        const { curso, materia } = req.query;
+        console.log(`GET /actividades query: curso=${curso}, materia=${materia}`);
         const whereClause = {};
-        if (req.query.curso) whereClause.curso = req.query.curso;
-        if (req.query.materia) whereClause.materia = req.query.materia;
+        if (curso) whereClause.curso = curso;
+        if (materia) whereClause.materia = materia;
 
         const actividades = await Actividad.findAll({ where: whereClause });
+        console.log(`Found ${actividades.length} actividades`);
         res.json(actividades);
     } catch (error) {
         res.status(500).json({ error: error.message });

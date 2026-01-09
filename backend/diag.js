@@ -1,48 +1,33 @@
-const sequelize = require('./config/db');
-const Alumno = require('./models/Alumno');
-const Nota = require('./models/Nota');
 const Material = require('./models/Material');
 const Actividad = require('./models/Actividad');
-
-Alumno.hasMany(Nota, { as: 'Notas' });
-Nota.belongsTo(Alumno);
+const Alumno = require('./models/Alumno');
 
 async function check() {
     try {
-        console.log('--- INFO ALUMNO JUAN PEREZ (L001) ---');
-        const juan = await Alumno.findOne({
-            where: { legajo: 'L001' },
-            include: [{ model: Nota, as: 'Notas' }]
-        });
+        const mCount = await Material.count();
+        const aCount = await Actividad.count();
+        console.log(`MATERIALES TOTAL: ${mCount}`);
+        console.log(`ACTIVIDADES TOTAL: ${aCount}`);
 
-        if (!juan) {
-            console.log('Juan no está en la DB');
-        } else {
-            console.log(`Nombre: ${juan.nombre} ${juan.apellido}`);
-            console.log(`Email Alumno: ${juan.email}`);
-            console.log(`Email Padre: ${juan.email_padre}`);
-            console.log(`Curso: ${juan.curso}`);
-            console.log(`Notas encontradas: ${juan.Notas ? juan.Notas.length : 0}`);
-            if (juan.Notas) {
-                juan.Notas.slice(0, 3).forEach(n => console.log(` - ${n.materia}: ${n.t1_p1}`));
+        const juan = await Alumno.findOne({ where: { legajo: 'L001' } });
+        if (juan) {
+            console.log(`Juan Curso: ${juan.curso}`);
+            const mJuan = await Material.findAll({ where: { curso: juan.curso } });
+            console.log(`Materiales para curso ${juan.curso}: ${mJuan.length}`);
+            if (mJuan.length > 0) {
+                console.log('Muestras Materias Materiales:', [...new Set(mJuan.map(x => x.materia))]);
+            }
+
+            const aJuan = await Actividad.findAll({ where: { curso: juan.curso } });
+            console.log(`Actividades para curso ${juan.curso}: ${aJuan.length}`);
+            if (aJuan.length > 0) {
+                console.log('Muestras Materias Actividades:', [...new Set(aJuan.map(x => x.materia))]);
             }
         }
-
-        console.log('\n--- INFO LMS (CURSO 1A) ---');
-        const mats = await Material.findAll({ where: { curso: '1A' } });
-        console.log(`Materiales en 1A: ${mats.length}`);
-        if (mats.length > 0) {
-            console.log(` - Primero: ${mats[0].titulo} (${mats[0].materia})`);
-        }
-
-        const acts = await Actividad.findAll({ where: { curso: '1A' } });
-        console.log(`Actividades en 1A: ${acts.length}`);
-
     } catch (e) {
-        console.error(e);
+        console.error('ERROR EN DIAG:', e);
     } finally {
         process.exit();
     }
 }
-
 check();
