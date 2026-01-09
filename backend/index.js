@@ -199,6 +199,19 @@ app.post('/test/seed', verifyToken, authorize(['admin']), async (req, res) => {
             if (!created) await alumno.update(a); // Update course/email if changed
             if (created) createdCount++;
 
+            // Si es Juan Perez, cargarle trayectoria también
+            if (alumno.legajo === 'L001') {
+                await HistorialAcademico.destroy({ where: { AlumnoId: alumno.id } });
+                await HistorialAcademico.create({
+                    ciclo_lectivo: 2025,
+                    curso: '1A',
+                    condicion: 'promovido',
+                    promedio_general: 8.50,
+                    observaciones: 'Excelente desempeño en ciclo anterior.',
+                    AlumnoId: alumno.id
+                });
+            }
+
             // Crear notas random para estos alumnos
             await Nota.destroy({ where: { AlumnoId: alumno.id } });
 
