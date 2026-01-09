@@ -133,6 +133,11 @@ app.post('/asistencias', verifyToken, authorize(['admin', 'preceptor', 'jefe_pre
     }
 });
 
+const Material = require('./models/Material');
+const Actividad = require('./models/Actividad');
+
+// ... (existing routes)
+
 app.get('/asistencias', verifyToken, async (req, res) => {
     // Si es alumno o padre, filtrar solo las suyas (Pendiente de vincular Usuario -> Alumno)
     // Por ahora devolvemos todo para roles con permiso
@@ -141,6 +146,55 @@ app.get('/asistencias', verifyToken, async (req, res) => {
         return res.json(lista);
     }
     res.status(403).json({ message: 'Acceso restringido' });
+});
+
+// --- RUTAS LMS (MATERIALES Y ACTIVIDADES) ---
+
+// Materiales
+app.post('/materiales', verifyToken, authorize(['admin', 'profesor']), async (req, res) => {
+    try {
+        const material = await Material.create(req.body);
+        res.status(201).json(material);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.get('/materiales', verifyToken, async (req, res) => {
+    try {
+        // Filtros opcionales por query string: ?curso=1A&materia=Matemática
+        const whereClause = {};
+        if (req.query.curso) whereClause.curso = req.query.curso;
+        if (req.query.materia) whereClause.materia = req.query.materia;
+
+        const materiales = await Material.findAll({ where: whereClause });
+        res.json(materiales);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Actividades
+app.post('/actividades', verifyToken, authorize(['admin', 'profesor']), async (req, res) => {
+    try {
+        const actividad = await Actividad.create(req.body);
+        res.status(201).json(actividad);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.get('/actividades', verifyToken, async (req, res) => {
+    try {
+        const whereClause = {};
+        if (req.query.curso) whereClause.curso = req.query.curso;
+        if (req.query.materia) whereClause.materia = req.query.materia;
+
+        const actividades = await Actividad.findAll({ where: whereClause });
+        res.json(actividades);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 const PORT = process.env.PORT || 10000;
