@@ -12,6 +12,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.get('/ping', (req, res) => res.send('pong'));
+app.get('/version', (req, res) => res.json({ version: '1.2.0', timestamp: new Date().toISOString() }));
 app.get('/debug/users', async (req, res) => {
     try {
         const counts = await User.findAll({
