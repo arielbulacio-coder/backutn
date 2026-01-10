@@ -32,6 +32,7 @@ const Entrega = require('./models/Entrega');
 const CicloLectivo = require('./models/CicloLectivo');
 const Curso = require('./models/Curso');
 const Materia = require('./models/Materia');
+const MateriaCurso = require('./models/MateriaCurso');
 const HistorialAcademico = require('./models/HistorialAcademico');
 const ProfesorMateria = require('./models/ProfesorMateria');
 const Comunicado = require('./models/Comunicado');
@@ -189,6 +190,33 @@ app.delete('/materias/:id', verifyToken, authorize(['admin', 'director']), async
     } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
+
+// --- GESTIÓN DE PLAN DE ESTUDIOS (MATERIAS POR CURSO) ---
+app.get('/curricula', async (req, res) => {
+    try {
+        const curricula = await MateriaCurso.findAll();
+        res.json(curricula);
+    } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.post('/curricula', verifyToken, authorize(['admin', 'director', 'vicedirector']), async (req, res) => {
+    try {
+        const { curso, materia } = req.body;
+        // Evitar duplicados
+        const existe = await MateriaCurso.findOne({ where: { curso, materia, ciclo_lectivo: new Date().getFullYear() } });
+        if (existe) return res.status(400).json({ message: 'Esa materia ya está asignada a ese curso.' });
+
+        const nuevo = await MateriaCurso.create({ curso, materia });
+        res.status(201).json(nuevo);
+    } catch (error) { res.status(400).json({ error: error.message }); }
+});
+
+app.delete('/curricula/:id', verifyToken, authorize(['admin', 'director', 'vicedirector']), async (req, res) => {
+    try {
+        await MateriaCurso.destroy({ where: { id: req.params.id } });
+        res.json({ message: 'Asignación curricular eliminada' });
+    } catch (error) { res.status(500).json({ error: error.message }); }
+});
 
 // --- SEED AUTOMÁTICO DE CURSOS/MATERIAS SI VACÍO ---
 const seedAcademicData = async () => {
@@ -639,7 +667,7 @@ app.get('/profesor/asignaciones', verifyToken, authorize(['profesor', 'admin', '
 });
 
 // Endpoint para asignar materias (Admin/Director)
-app.post('/admin/asignar-materia', verifyToken, authorize(['admin', 'director', 'secretario']), async (req, res) => {
+app.post('/admin/asignar-materia', verifyToken, authorize(['admin', 'director', 'vicedirector', 'secretario']), async (req, res) => {
     try {
         const { email_profesor, curso, materia } = req.body;
         const nueva = await ProfesorMateria.create({
@@ -652,7 +680,8 @@ app.post('/admin/asignar-materia', verifyToken, authorize(['admin', 'director', 
 });
 
 // Actualizar Planificación Anual (Profesor)
-app.put('/profesor/planificacion', verifyToken, authorize(['profesor', 'admin', 'director']), async (req, res) => {
+app.put('/profesor/planificacion', verifyToken, authorize(['profesor', 'admin', 'director', 'vicedirector']), async (req, res) => {
+    // ... (rest of the file)
     try {
         const { id, link } = req.body;
         // ID is the ProfesorMateria ID from the assignment list
