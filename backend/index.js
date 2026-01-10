@@ -191,22 +191,22 @@ app.delete('/materias/:id', verifyToken, authorize(['admin', 'director']), async
 });
 
 
-// --- GESTIÓN DE PLAN DE ESTUDIOS (MATERIAS POR CURSO) ---
+// --- GESTIÓN DE PLAN DE ESTUDIOS (MATERIAS POR AÑO) ---
 app.get('/curricula', async (req, res) => {
     try {
-        const curricula = await MateriaCurso.findAll();
+        const curricula = await MateriaCurso.findAll({ order: [['anio', 'ASC']] });
         res.json(curricula);
     } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
 app.post('/curricula', verifyToken, authorize(['admin', 'director', 'vicedirector']), async (req, res) => {
     try {
-        const { curso, materia } = req.body;
+        const { anio, materia } = req.body;
         // Evitar duplicados
-        const existe = await MateriaCurso.findOne({ where: { curso, materia, ciclo_lectivo: new Date().getFullYear() } });
-        if (existe) return res.status(400).json({ message: 'Esa materia ya está asignada a ese curso.' });
+        const existe = await MateriaCurso.findOne({ where: { anio, materia, ciclo_lectivo: new Date().getFullYear() } });
+        if (existe) return res.status(400).json({ message: 'Materia ya asignada a este año.' });
 
-        const nuevo = await MateriaCurso.create({ curso, materia });
+        const nuevo = await MateriaCurso.create({ anio, materia });
         res.status(201).json(nuevo);
     } catch (error) { res.status(400).json({ error: error.message }); }
 });
@@ -215,6 +215,20 @@ app.delete('/curricula/:id', verifyToken, authorize(['admin', 'director', 'viced
     try {
         await MateriaCurso.destroy({ where: { id: req.params.id } });
         res.json({ message: 'Asignación curricular eliminada' });
+    } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// Endpoint especial para generar/crear curso estructurado
+app.post('/cursos/generar', verifyToken, authorize(['admin', 'director']), async (req, res) => {
+    try {
+        const { anio, division } = req.body;
+        const nombre = `${anio}° ${division}`;
+
+        let curso = await Curso.findOne({ where: { nombre } });
+        if (curso) return res.status(400).json({ message: 'El curso ya existe.' });
+
+        curso = await Curso.create({ nombre, anio, division });
+        res.status(201).json(curso);
     } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
