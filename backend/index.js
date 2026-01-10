@@ -573,14 +573,15 @@ app.post('/notas', verifyToken, authorize(['admin', 'profesor', 'director']), as
             return res.status(400).json({ message: 'Faltan datos requeridos (AlumnoId, materia)' });
         }
 
-        const alumno = await Alumno.findByPk(AlumnoId);
-        if (!alumno) return res.status(404).json({ message: 'Alumno no encontrado' });
+        // VALIDAR PERMISO PROFESOR
+        if (req.user.role === 'profesor') {
+            const alumno = await Alumno.findByPk(AlumnoId);
+            if (!alumno) return res.status(404).json({ message: 'Alumno no encontrado' });
 
-        // VALIDAR PERMISO PROFESOR (Si es profesor, solo puede editar ciclo actual probablemente, pero admin puede historico)
-        // Para simplificar, dejamos validación soft. 
-        const permitido = await validarAsignacionProfesor(req.user, alumno.curso, materia);
-        if (!permitido) {
-            return res.status(403).json({ message: 'No tiene asignada esta materia en este curso.' });
+            const permitido = await validarAsignacionProfesor(req.user, alumno.curso, materia);
+            if (!permitido) {
+                return res.status(403).json({ message: 'No tiene asignada esta materia en este curso.' });
+            }
         }
 
         // Buscar registro por alumno, materia Y CICLO LECTIVO
