@@ -30,6 +30,8 @@ const Material = require('./models/Material');
 const Actividad = require('./models/Actividad');
 const Entrega = require('./models/Entrega');
 const CicloLectivo = require('./models/CicloLectivo');
+const Curso = require('./models/Curso');
+const Materia = require('./models/Materia');
 const HistorialAcademico = require('./models/HistorialAcademico');
 const ProfesorMateria = require('./models/ProfesorMateria');
 const Comunicado = require('./models/Comunicado');
@@ -57,6 +59,7 @@ const bcrypt = require('bcryptjs');
 // Usamos sync() - En producción usar migraciones. Aquí alter: true para agregar columnas nuevas
 sequelize.sync({ alter: true }).then(async () => {
     console.log('Tablas sincronizadas (alter: true)');
+    await seedAcademicData(); // Ensure courses/subjects exist
 
     // Inicializar Ciclo Lectivo actual si no existe
     const anioActual = new Date().getFullYear();
@@ -121,6 +124,98 @@ app.put('/perfil', verifyToken, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// --- GESTIÓN DE CURSOS Y MATERIAS (ADMIN/DIRECTOR) ---
+
+// CURSOS
+app.get('/cursos', async (req, res) => {
+    try {
+        const cursos = await Curso.findAll({ order: [['nombre', 'ASC']] });
+        res.json(cursos);
+    } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.post('/cursos', verifyToken, authorize(['admin', 'director']), async (req, res) => {
+    try {
+        const { nombre } = req.body;
+        const nuevo = await Curso.create({ nombre });
+        res.status(201).json(nuevo);
+    } catch (error) { res.status(400).json({ error: error.message }); }
+});
+
+app.put('/cursos/:id', verifyToken, authorize(['admin', 'director']), async (req, res) => {
+    try {
+        const { nombre } = req.body;
+        await Curso.update({ nombre }, { where: { id: req.params.id } });
+        res.json({ message: 'Curso actualizado' });
+    } catch (error) { res.status(400).json({ error: error.message }); }
+});
+
+app.delete('/cursos/:id', verifyToken, authorize(['admin', 'director']), async (req, res) => {
+    try {
+        await Curso.destroy({ where: { id: req.params.id } });
+        res.json({ message: 'Curso eliminado' });
+    } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// MATERIAS
+app.get('/materias', async (req, res) => {
+    try {
+        const materias = await Materia.findAll({ order: [['nombre', 'ASC']] });
+        res.json(materias);
+    } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.post('/materias', verifyToken, authorize(['admin', 'director']), async (req, res) => {
+    try {
+        const { nombre } = req.body;
+        const nueva = await Materia.create({ nombre });
+        res.status(201).json(nueva);
+    } catch (error) { res.status(400).json({ error: error.message }); }
+});
+
+app.put('/materias/:id', verifyToken, authorize(['admin', 'director']), async (req, res) => {
+    try {
+        const { nombre } = req.body;
+        await Materia.update({ nombre }, { where: { id: req.params.id } });
+        res.json({ message: 'Materia actualizada' });
+    } catch (error) { res.status(400).json({ error: error.message }); }
+});
+
+app.delete('/materias/:id', verifyToken, authorize(['admin', 'director']), async (req, res) => {
+    try {
+        await Materia.destroy({ where: { id: req.params.id } });
+        res.json({ message: 'Materia eliminada' });
+    } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+
+// --- SEED AUTOMÁTICO DE CURSOS/MATERIAS SI VACÍO ---
+const seedAcademicData = async () => {
+    try {
+        const cCount = await Curso.count();
+        if (cCount === 0) {
+            await Curso.bulkCreate([
+                { nombre: '1A' }, { nombre: '1B' }, { nombre: '2A' }, { nombre: '2B' },
+                { nombre: '3A' }, { nombre: '4o 1a' }, { nombre: '5o 1a' }, { nombre: '6o 2a' }, { nombre: '7o 1a' }
+            ]);
+            console.log('Cursos iniciales creados.');
+        }
+        const mCount = await Materia.count();
+        if (mCount === 0) {
+            await Materia.bulkCreate([
+                { nombre: 'Matemática' }, { nombre: 'Lengua' }, { nombre: 'Física' },
+                { nombre: 'Química' }, { nombre: 'Inglés' }, { nombre: 'Historia' },
+                { nombre: 'Electrónica Aplicada' }, { nombre: 'Sistemas Digitales' },
+                { nombre: 'Máquinas Eléctricas' }, { nombre: 'Seguridad e Higiene' },
+                { nombre: 'Prácticas Profesionalizantes' }
+            ]);
+            console.log('Materias iniciales creadas.');
+        }
+    } catch (e) {
+        console.error('Seed academic error:', e);
+    }
+};
 
 // --- GESTIÓN DE USUARIOS (ADMIN) ---
 app.get('/users', verifyToken, authorize(['admin', 'director', 'secretario']), async (req, res) => {
