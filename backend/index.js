@@ -78,7 +78,7 @@ sequelize.sync({ alter: true }).then(async () => {
 app.use('/', authRoutes);
 
 // --- GESTIÓN DE USUARIOS (ADMIN) ---
-app.get('/users', verifyToken, authorize(['admin']), async (req, res) => {
+app.get('/users', verifyToken, authorize(['admin', 'director', 'secretario']), async (req, res) => {
     try {
         const users = await User.findAll({ attributes: { exclude: ['password'] } });
         res.json(users);
@@ -477,9 +477,9 @@ const validarAsignacionProfesor = async (user, curso, materia) => {
 };
 
 // Endpoint para que el profesor consulte SUS materias asignadas (para rellenar combos)
-app.get('/profesor/asignaciones', verifyToken, authorize(['profesor', 'admin']), async (req, res) => {
+app.get('/profesor/asignaciones', verifyToken, authorize(['profesor', 'admin', 'director', 'secretario']), async (req, res) => {
     try {
-        if (req.user.role === 'admin') {
+        if (['admin', 'director', 'secretario'].includes(req.user.role)) {
             // Admin ve todo (o mockeamos todas las combinaciones)
             // Esto es más para UI. Retornamos todo lo asignado en el sistema
             const todas = await ProfesorMateria.findAll();
