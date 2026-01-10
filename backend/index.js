@@ -655,6 +655,44 @@ app.get('/asistencias', verifyToken, async (req, res) => {
 
 // --- RUTAS LMS (MATERIALES Y ACTIVIDADES) ---
 
+// Reporte de Totales de Asistencias (Admin/Preceptor)
+app.get('/admin/asistencias/totales', verifyToken, authorize(['admin', 'director', 'secretario', 'jefe_preceptores', 'preceptor']), async (req, res) => {
+    try {
+        const { curso } = req.query;
+        let whereClause = {};
+        if (curso) whereClause.curso = curso;
+
+        const alumnos = await Alumno.findAll({
+            where: whereClause,
+            include: [{
+                model: Asistencia,
+                as: 'Asistencias',
+                where: { ciclo_lectivo: new Date().getFullYear() },
+                required: false // LEFT JOIN para traer alumnos con 0 faltas también
+            }]
+        });
+
+        const reporte = alumnos.map(alu => {
+            // Contamos ausentes y justificados
+            const count = alu.Asistencias.filter(a => a.estado === 'ausente' || a.estado === 'justificado').length;
+
+            return {
+                id: alu.id,
+                nombre: alu.nombre,
+                apellido: alu.apellido,
+                curso: alu.curso,
+                total_inasistencias: count
+            };
+        });
+
+        res.json(reporte);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- RUTAS LMS (MATERIALES Y ACTIVIDADES) ---
+
 // Materiales
 app.post('/materiales', verifyToken, authorize(['admin', 'profesor']), async (req, res) => {
     try {
