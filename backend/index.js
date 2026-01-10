@@ -618,8 +618,8 @@ app.post('/notas', verifyToken, authorize(['admin', 'profesor', 'director']), as
 });
 
 // --- RUTAS DE ASISTENCIA ---
-// Tomar lista: Preceptor, Jefe, Director, Admin
-app.post('/asistencias', verifyToken, authorize(['admin', 'preceptor', 'jefe_preceptores', 'director']), async (req, res) => {
+// Tomar lista: Preceptor, Jefe, Director, Admin, Profesor
+app.post('/asistencias', verifyToken, authorize(['admin', 'preceptor', 'jefe_preceptores', 'director', 'profesor']), async (req, res) => {
     try {
         // Espera un array de asistencias o una sola
         const body = Array.isArray(req.body) ? req.body : [req.body];
