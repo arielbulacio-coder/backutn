@@ -511,6 +511,16 @@ app.post('/admin/asignar-materia', verifyToken, authorize(['admin', 'director', 
     }
 });
 
+// Eliminar asignación
+app.delete('/admin/asignar-materia/:id', verifyToken, authorize(['admin', 'director', 'secretario']), async (req, res) => {
+    try {
+        await ProfesorMateria.destroy({ where: { id: req.params.id } });
+        res.json({ message: 'Asignación eliminada' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- RUTAS DE NOTAS ---
 // Cargar nota: Profesor (validado), Admin
 app.post('/notas', verifyToken, authorize(['admin', 'profesor', 'director']), async (req, res) => {
