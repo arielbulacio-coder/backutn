@@ -19,6 +19,7 @@ const Entrega = require('./models/Entrega');
 const CicloLectivo = require('./models/CicloLectivo');
 const HistorialAcademico = require('./models/HistorialAcademico');
 const ProfesorMateria = require('./models/ProfesorMateria');
+const Comunicado = require('./models/Comunicado');
 const authorize = require('./middleware/roleMiddleware');
 
 // Establecer Relaciones
@@ -820,6 +821,67 @@ app.post('/ciclo-lectivo/promocion-masiva', verifyToken, authorize(['admin', 'di
         res.json({ message: 'Promoción masiva completada', promovidos });
     } catch (error) {
         console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+// --- COMUNICADOS Y LLAMADOS DE ATENCIÓN ---
+app.post('/comunicados', verifyToken, authorize(['admin', 'jefe_preceptores', 'director']), async (req, res) => {
+    try {
+        const { titulo, mensaje, tipo, destinatario_curso, AlumnoId } = req.body;
+
+        const comunicado = await Comunicado.create({
+            titulo,
+            mensaje,
+            tipo,
+            destinatario_curso: tipo === 'general' ? destinatario_curso : null,
+            AlumnoId: (tipo === 'individual' || tipo === 'llamado_atencion') ? AlumnoId : null,
+            EmisorId: req.user.id
+        });
+        res.status(201).json(comunicado);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.get('/comunicados', verifyToken, async (req, res) => {
+    try {
+        const userRole = req.user.role;
+        const userEmail = req.user.email;
+        let whereClause = {};
+        const { Op } = require('sequelize');
+
+        // If student/parent: see General for their course OR Individual for them
+        if (['alumno', 'padre'].includes(userRole)) {
+            const alumno = await Alumno.findOne({ where: { email: userEmail } }); // Simplified linkage
+            if (!alumno) return res.json([]);
+
+            whereClause = {
+                [Op.or]: [
+                    { tipo: 'general', destinatario_curso: alumno.curso },
+                    { tipo: ['individual', 'llamado_atencion'], AlumnoId: alumno.id }
+                ]
+            };
+        }
+        // If Staff: see all sent by them? Or all in system?
+        else if (['admin', 'director', 'jefe_preceptores', 'preceptor'].includes(userRole)) {
+            const { curso, AlumnoId, tipo } = req.query;
+            if (curso) whereClause.destinatario_curso = curso;
+            if (AlumnoId) whereClause.AlumnoId = AlumnoId;
+            if (tipo) whereClause.tipo = tipo;
+        }
+
+        const comunicados = await Comunicado.findAll({
+            where: whereClause,
+            order: [['createdAt', 'DESC']],
+            include: [
+                { model: User, as: 'Emisor', attributes: ['email', 'role'] },
+                { model: Alumno, as: 'DestinatarioAlumno', attributes: ['nombre', 'apellido', 'curso'] }
+            ]
+        });
+        res.json(comunicados);
+    } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
