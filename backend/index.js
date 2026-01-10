@@ -20,6 +20,7 @@ const CicloLectivo = require('./models/CicloLectivo');
 const HistorialAcademico = require('./models/HistorialAcademico');
 const ProfesorMateria = require('./models/ProfesorMateria');
 const Comunicado = require('./models/Comunicado');
+const LibroTema = require('./models/LibroTema');
 const authorize = require('./middleware/roleMiddleware');
 
 // Establecer Relaciones
