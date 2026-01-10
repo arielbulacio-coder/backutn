@@ -12,6 +12,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.get('/ping', (req, res) => res.send('pong'));
+app.get('/debug/users', async (req, res) => {
+    try {
+        const counts = await User.findAll({
+            attributes: ['role', [sequelize.fn('COUNT', sequelize.col('role')), 'count']],
+            group: ['role']
+        });
+        res.json(counts);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
 const Asistencia = require('./models/Asistencia');
 const Material = require('./models/Material');
@@ -72,8 +83,20 @@ sequelize.sync({ alter: true }).then(async () => {
             });
             console.log(`Usuario admin creado por defecto: ${adminEmail} / ariel2027`);
         }
+
+        // Test Director Creation
+        const dirEmail = 'director@utn.com';
+        const dirExists = await User.findOne({ where: { email: dirEmail } });
+        if (!dirExists) {
+            const hash = await bcrypt.hash('director', 10);
+            await User.create({ email: dirEmail, password: hash, role: 'director' });
+            console.log('Usuario DIRECTOR creado exitosamente.');
+        } else {
+            console.log('Usuario DIRECTOR ya existe.');
+        }
+
     } catch (error) {
-        console.error('Error al crear usuario admin:', error);
+        console.error('Error al crear usuarios iniciales:', error);
     }
 }).catch(err => console.log('Error al sincronizar:', err));
 
