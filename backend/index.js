@@ -563,6 +563,34 @@ app.delete('/admin/asignar-materia/:id', verifyToken, authorize(['admin', 'direc
     }
 });
 
+// Obtener mis asignaciones (Para el profesor)
+app.get('/profesor/me/asignaciones', verifyToken, authorize(['profesor', 'admin', 'director']), async (req, res) => {
+    try {
+        // Si es admin/director, mostrar todas (opcional, o vacio si quieren ver como profesor específico)
+        // Pero el requerimiento es para que EL profesor vea SUS cursos.
+        // Si es admin, devolvemos todo o dejamos que frontend maneje constantes globales.
+        if (req.user.role !== 'profesor') {
+            return res.json({ asignaciones: [], isAdmin: true });
+        }
+
+        const asignaciones = await ProfesorMateria.findAll({
+            where: { email_profesor: req.user.email }
+        });
+
+        // Formato simplificado: { cursos: ['6o 2a'], materias: ['Matemática'] } ??
+        // Mejor devolver la lista de pares curso-materia validos
+        const pares = asignaciones.map(a => ({
+            curso: a.curso,
+            materia: a.materia,
+            id: a.id
+        }));
+
+        res.json(pares);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- RUTAS DE NOTAS ---
 // Cargar nota: Profesor (validado), Admin
 app.post('/notas', verifyToken, authorize(['admin', 'profesor', 'director']), async (req, res) => {
