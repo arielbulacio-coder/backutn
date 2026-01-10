@@ -9,12 +9,13 @@ const nodemailer = require('nodemailer');
 // Configuración de transporte de correo (simulado o real)
 // En producción, usar variables de env reales: SMTP_HOST, SMTP_USER, etc.
 const transporter = nodemailer.createTransport({
-    // Si no hay variables, Nodemailer intentará usar una conexión directa o fallará, 
-    // pero manejaremos el error para mostrar el link en consola en desarrollo.
-    service: process.env.SMTP_SERVICE || 'gmail',
+    // Configuración específica de Gmail (o usar host smtp.gmail.com)
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: process.env.SMTP_PORT || 465,
+    secure: true, // true para 465, false para otros puertos
     auth: {
-        user: process.env.SMTP_USER, // ej: micorreo@gmail.com
-        pass: process.env.SMTP_PASS  // ej: password de aplicación
+        user: process.env.SMTP_USER || 'arielbulacio@gmail.com',
+        pass: process.env.SMTP_PASS || 'cfp402miescuela'
     }
 });
 
