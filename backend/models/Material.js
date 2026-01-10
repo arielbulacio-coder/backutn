@@ -29,6 +29,19 @@ const Material = sequelize.define('Material', {
     ciclo_lectivo: {
         type: DataTypes.INTEGER,
         defaultValue: new Date().getFullYear()
+    },
+    trimestre: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 1
+    },
+    unidad: {
+        type: DataTypes.STRING,
+        allowNull: true // Ej: "Unidad 1: Introducción"
+    },
+    visible: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true
     }
 });
 

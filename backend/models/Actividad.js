@@ -25,6 +25,18 @@ const Actividad = sequelize.define('Actividad', {
     ciclo_lectivo: {
         type: DataTypes.INTEGER,
         defaultValue: new Date().getFullYear()
+    },
+    trimestre: {
+        type: DataTypes.INTEGER,
+        defaultValue: 1
+    },
+    unidad: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    visible: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true
     }
 });
 

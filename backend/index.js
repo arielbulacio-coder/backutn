@@ -11,6 +11,7 @@ const verifyToken = require('./middleware/authMiddleware');
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.get('/ping', (req, res) => res.send('pong'));
 
 const Asistencia = require('./models/Asistencia');
 const Material = require('./models/Material');
