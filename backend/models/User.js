@@ -18,6 +18,22 @@ const User = sequelize.define('User', {
         type: DataTypes.ENUM,
         values: ['admin', 'alumno', 'profesor', 'padre', 'preceptor', 'jefe_preceptores', 'secretario', 'director'],
         defaultValue: 'alumno'
+    },
+    foto: {
+        type: DataTypes.TEXT, // Base64 or URL
+        allowNull: true
+    },
+    telefono: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    bio: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    intereses: {
+        type: DataTypes.TEXT,
+        allowNull: true
     }
 });
 

@@ -17,6 +17,10 @@ const ProfesorMateria = sequelize.define('ProfesorMateria', {
     ciclo_lectivo: {
         type: DataTypes.INTEGER,
         defaultValue: new Date().getFullYear()
+    },
+    planificacion_url: {
+        type: DataTypes.STRING, // Link to Google Docs etc.
+        allowNull: true
     }
 });
 

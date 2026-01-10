@@ -79,6 +79,24 @@ sequelize.sync({ alter: true }).then(async () => {
 // Rutas de Autenticación
 app.use('/', authRoutes);
 
+// --- PERFIL DE USUARIO ---
+app.put('/perfil', verifyToken, async (req, res) => {
+    try {
+        const { foto, telefono, bio, intereses } = req.body;
+        const user = await User.findByPk(req.user.id);
+
+        if (foto !== undefined) user.foto = foto;
+        if (telefono !== undefined) user.telefono = telefono;
+        if (bio !== undefined) user.bio = bio;
+        if (intereses !== undefined) user.intereses = intereses;
+
+        await user.save();
+        res.json({ message: 'Perfil actualizado', user });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- GESTIÓN DE USUARIOS (ADMIN) ---
 app.get('/users', verifyToken, authorize(['admin', 'director', 'secretario']), async (req, res) => {
     try {
@@ -513,6 +531,28 @@ app.post('/admin/asignar-materia', verifyToken, authorize(['admin', 'director', 
     }
 });
 
+// Actualizar Planificación Anual (Profesor)
+app.put('/profesor/planificacion', verifyToken, authorize(['profesor', 'admin', 'director']), async (req, res) => {
+    try {
+        const { id, link } = req.body;
+        // ID is the ProfesorMateria ID from the assignment list
+        const asignacion = await ProfesorMateria.findByPk(id);
+
+        if (!asignacion) return res.status(404).json({ error: 'Asignación no encontrada' });
+
+        // If not admin/director, check if it belongs to logged teacher
+        if (req.user.role === 'profesor' && asignacion.email_profesor !== req.user.email) {
+            return res.status(403).json({ error: 'No autorizado para editar esta planificación.' });
+        }
+
+        asignacion.planificacion_url = link;
+        await asignacion.save();
+        res.json(asignacion);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Eliminar asignación
 app.delete('/admin/asignar-materia/:id', verifyToken, authorize(['admin', 'director', 'secretario']), async (req, res) => {
     try {
@@ -882,6 +922,45 @@ app.get('/comunicados', verifyToken, async (req, res) => {
             ]
         });
         res.json(comunicados);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- LIBRO DE TEMAS ---
+app.post('/libro-temas', verifyToken, authorize(['admin', 'profesor', 'director']), async (req, res) => {
+    try {
+        const { fecha, curso, materia, tema, actividad, observacion } = req.body;
+        const nuevo = await LibroTema.create({
+            fecha,
+            curso,
+            materia,
+            tema,
+            actividad,
+            observacion,
+            ProfesorId: req.user.id
+        });
+        res.status(201).json(nuevo);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.get('/libro-temas', verifyToken, async (req, res) => {
+    try {
+        const { curso, materia } = req.query;
+        let whereClause = {};
+        if (curso) whereClause.curso = curso;
+        if (materia) whereClause.materia = materia;
+
+        const libros = await LibroTema.findAll({
+            where: whereClause,
+            order: [['fecha', 'DESC']],
+            include: [
+                { model: User, as: 'Profesor', attributes: ['email'] }
+            ]
+        });
+        res.json(libros);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
